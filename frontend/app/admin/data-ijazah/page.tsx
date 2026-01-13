@@ -63,6 +63,7 @@ interface PopupDiplomaData {
   ipfs: string;
   alamatPenerbit: string;
   tokenID: string;
+  certificateId: string; // Added certificateId property
   status: 'Pending' | 'Minted';
   selected: boolean;
 }
@@ -135,145 +136,48 @@ export default function DataIjazahPage() {
         // Format data sesuai interface
         const formattedData: ExtendedDiploma[] = dataArray.map((item: any) => ({
           id: item.id || item.ID || 0,
-          nama_lengkap: item.nama_lengkap || item.nama_lengkap || item.nama || '',
-          nim: item.nim || item.NIM || '',
-          program_studi: item.program_studi || item.program_studi || item.prodi || '',
-          gelar_akademik: item.gelar_akademik || item.gelar_akademik || item.gelar || '',
-          fakultas: item.fakultas || item.fakultas || '',
-          tanggal_lulus: item.tanggal_lulus || item.tanggal_lulus || '',
-          ipk: item.ipk || item.IPK || 0,
-          judul_skripsi: item.judul_skripsi || item.judul_skripsi || item.judul || '',
-          tahun_akademik: item.tahun_akademik || item.tahun_akademik || item.tahun_akademik || '',
-          yudisium: item.yudisium || item.yudisium || '',
-          wallet_address: item.wallet_address || item.wallet_address || '',
-          transaction_hash: item.transaction_hash || item.transaction_hash || '',
-          contract_address: item.contract_address || item.contract_address || '',
-          token_id: item.token_id || item.token_id || '',
-          block_number: item.block_number || item.block_number || 0,
-          nama_file: item.nama_file || item.nama_file || '',
-          path_file: item.path_file || item.path_file || '',
-          ukuran_file: item.ukuran_file || item.ukuran_file || 0,
-          tipe_file: item.tipe_file || item.tipe_file || '',
-          file_hash: item.file_hash || item.file_hash || '',
-          certificate_id: item.certificate_id || item.certificate_id || '',
-          status: item.status || item.status || 'pending',
-          verification_notes: item.verification_notes || item.verification_notes || '',
-          created_at: item.created_at || item.created_at || new Date().toISOString(),
-          updated_at: item.updated_at || item.updated_at || new Date().toISOString(),
-          minted_at: item.minted_at || item.minted_at || '',
-          uploaded_by: item.uploaded_by || item.uploaded_by || 'admin',
-          verified_by: item.verified_by || item.verified_by || '',
-          minted_by: item.minted_by || item.minted_by || '',
-          nik: item.nik || item.nik || '',
-          tempat_tanggal_lahir: item.tempat_tanggal_lahir || item.tempat_tanggal_lahir || '',
-          nomor_sk_rektor: item.nomor_sk_rektor || item.nomor_sk_rektor || '',
-          tanggal_sk_rektor: item.tanggal_sk_rektor || item.tanggal_sk_rektor || '',
-          student_email: item.student_email || item.student_email || ''
+          nama_lengkap: item.nama_lengkap || item.nama || '',
+          nim: item.nim || '',
+          program_studi: item.program_studi || '',
+          gelar_akademik: item.gelar_akademik || '',
+          fakultas: item.fakultas || '',
+          tanggal_lulus: item.tanggal_lulus || '',
+          ipk: item.ipk || 0,
+          judul_skripsi: item.judul_skripsi || '',
+          tahun_akademik: item.tahun_akademik || '',
+          yudisium: item.yudisium || '',
+          wallet_address: item.wallet_address || '',
+          transaction_hash: item.transaction_hash || '',
+          contract_address: item.contract_address || '',
+          token_id: item.token_id || '',
+          block_number: item.block_number || 0,
+          nama_file: item.nama_file || '',
+          path_file: item.path_file || '',
+          ukuran_file: item.ukuran_file || 0,
+          tipe_file: item.tipe_file || '',
+          file_hash: item.file_hash || '',
+          certificate_id: item.certificate_id || '',
+          status: item.status || 'pending',
+          verification_notes: item.verification_notes || '',
+          created_at: item.created_at || '',
+          updated_at: item.updated_at || '',
+          minted_at: item.minted_at || '',
+          uploaded_by: item.uploaded_by || '',
+          verified_by: item.verified_by || '',
+          minted_by: item.minted_by || ''
         }));
         
         setDiplomas(formattedData);
-        console.log('✅ [4] Loaded data from API:', formattedData.length, 'items');
-        return; // Success, exit function
-        
-      } catch (apiError: any) {
-        console.warn('⚠️ [5] Error with main API endpoint:', apiError);
-        console.warn('⚠️ Error message:', apiError.message);
-        
-        // Coba endpoint alternatif
-        try {
-          console.log('🔄 [6] Trying alternative endpoint...');
-          const fallbackResponse = await fetch(`${API_BASE_URL}/api/diplomas/all`, {
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            }
-          });
-          
-          if (!fallbackResponse.ok) {
-            throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
-          }
-          
-          const fallbackResult = await fallbackResponse.json();
-          console.log('📡 [7] Fallback response:', fallbackResult);
-          
-          let fallbackArray: any[] = [];
-          
-          // Handle various response formats
-          if (Array.isArray(fallbackResult)) {
-            fallbackArray = fallbackResult;
-          } else if (fallbackResult.data && Array.isArray(fallbackResult.data)) {
-            fallbackArray = fallbackResult.data;
-          } else if (fallbackResult.success && fallbackResult.data && Array.isArray(fallbackResult.data)) {
-            fallbackArray = fallbackResult.data;
-          }
-          
-          if (fallbackArray.length > 0) {
-            const formattedFallback: ExtendedDiploma[] = fallbackArray.map((item: any) => ({
-              id: item.id || item.ID || 0,
-              nama_lengkap: item.nama_lengkap || item.nama_lengkap || item.nama || '',
-              nim: item.nim || item.NIM || '',
-              program_studi: item.program_studi || item.program_studi || item.prodi || '',
-              gelar_akademik: item.gelar_akademik || item.gelar_akademik || item.gelar || '',
-              fakultas: item.fakultas || item.fakultas || '',
-              tanggal_lulus: item.tanggal_lulus || item.tanggal_lulus || '',
-              ipk: item.ipk || item.IPK || 0,
-              judul_skripsi: item.judul_skripsi || item.judul_skripsi || item.judul || '',
-              tahun_akademik: item.tahun_akademik || item.tahun_akademik || item.tahun_akademik || '',
-              yudisium: item.yudisium || item.yudisium || '',
-              wallet_address: item.wallet_address || item.wallet_address || '',
-              transaction_hash: item.transaction_hash || item.transaction_hash || '',
-              contract_address: item.contract_address || item.contract_address || '',
-              token_id: item.token_id || item.token_id || '',
-              block_number: item.block_number || item.block_number || 0,
-              nama_file: item.nama_file || item.nama_file || '',
-              path_file: item.path_file || item.path_file || '',
-              ukuran_file: item.ukuran_file || item.ukuran_file || 0,
-              tipe_file: item.tipe_file || item.tipe_file || '',
-              file_hash: item.file_hash || item.file_hash || '',
-              certificate_id: item.certificate_id || item.certificate_id || '',
-              status: item.status || item.status || 'pending',
-              verification_notes: item.verification_notes || item.verification_notes || '',
-              created_at: item.created_at || item.created_at || new Date().toISOString(),
-              updated_at: item.updated_at || item.updated_at || new Date().toISOString(),
-              minted_at: item.minted_at || item.minted_at || '',
-              uploaded_by: item.uploaded_by || item.uploaded_by || 'admin',
-              verified_by: item.verified_by || item.verified_by || '',
-              minted_by: item.minted_by || item.minted_by || '',
-              nik: item.nik || item.nik || '',
-              tempat_tanggal_lahir: item.tempat_tanggal_lahir || item.tempat_tanggal_lahir || '',
-              nomor_sk_rektor: item.nomor_sk_rektor || item.nomor_sk_rektor || '',
-              tanggal_sk_rektor: item.tanggal_sk_rektor || item.tanggal_sk_rektor || '',
-              student_email: item.student_email || item.student_email || ''
-            }));
-            
-            setDiplomas(formattedFallback);
-            console.log(`✅ [8] Loaded ${formattedFallback.length} items from fallback API`);
-            return; // Success with fallback
-          } else {
-            throw new Error('Fallback API returned empty data');
-          }
-          
-        } catch (fallbackError: any) {
-          console.warn('⚠️ [9] Fallback also failed:', fallbackError);
-          console.warn('⚠️ Fallback error message:', fallbackError.message);
-        }
+      } catch (error) {
+        console.error('🔥 [11] Critical error in fetchDiplomas:', error);
+        alert('❌ Gagal memuat data ijazah. Coba lagi nanti.');
+      } finally {
+        setLoading(false);
       }
-      
-      // Jika semua API gagal, tampilkan array kosong (tidak pakai mock data)
-      console.log('🔄 [10] All API endpoints failed, showing empty state');
-      setDiplomas([]);
-      
-    } catch (error: any) {
+    } catch (error) {
       console.error('🔥 [11] Critical error in fetchDiplomas:', error);
-      console.error('🔥 [12] Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-      
-      setDiplomas([]);
-      
+      alert('❌ Gagal memuat data ijazah. Coba lagi nanti.');
     } finally {
-      console.log('🏁 [13] Finally: setLoading(false)');
       setLoading(false);
     }
   }, [API_BASE_URL]);
@@ -387,6 +291,7 @@ export default function DataIjazahPage() {
       ipfs: diploma.file_hash || '',
       alamatPenerbit: diploma.contract_address || '0x1234567890abcdef1234567890abcdef12345678',
       tokenID: diploma.token_id || diploma.certificate_id || `UWD-${new Date().getFullYear()}-${diploma.id}`,
+      certificateId: diploma.certificate_id || '', // Added certificateId property
       status: diploma.status === 'minted' ? 'Minted' : 'Pending',
       selected: false
     };

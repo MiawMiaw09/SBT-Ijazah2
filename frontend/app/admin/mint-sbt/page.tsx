@@ -307,45 +307,42 @@ export default function MintSbtPage() {
   // Handle mint ke blockchain (step 2) - VERSI SEDERHANA: LANGSUNG MINT
   const handleMintToBlockchain = async () => {
     if (!currentMintingItem) return;
-    
+
     setMintProgress(prev => ({ ...prev, isMinting: true }));
-    
+
     try {
-      // Generate data mint sederhana
-      const fakeTokenId = `SBT-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Date.now().toString().slice(-6)}`;
-      const fakeTxHash = `0x${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).substring(0, 8)}`;
-      const fakeContractAddress = `0x${Math.random().toString(36).substring(2, 42)}`;
-      const fakeBlockNumber = Math.floor(Math.random() * 1000000) + 1000000;
-      
+      // Skip blockchain upload temporarily
       const mintData: MintData = {
-        transaction_hash: fakeTxHash,
-        contract_address: fakeContractAddress,
-        token_id: fakeTokenId,
-        block_number: fakeBlockNumber,
+        transaction_hash: 'SKIPPED',
+        contract_address: 'SKIPPED',
+        token_id: `TEMP-${Date.now()}`,
+        block_number: 0,
         minted_by: 'admin'
       };
-      
+
       // API call untuk update mint status
       const response = await diplomaAPI.mintDiploma(currentMintingItem.id, mintData);
-      
+
+      console.log('MintDiploma API Response:', response);
+
       if (response.success) {
         // Update local state - HAPUS dari tabel MintSbtPage
         setDiplomas(prev => 
           prev.filter(item => item.id !== currentMintingItem.id)
         );
-        
+
         setMintProgress(prev => ({ ...prev, isMinting: false }));
         setMintStep('success');
-        
-        alert(`✅ Ijazah berhasil di-mint!\nToken ID: ${fakeTokenId}\n\nData akan hilang dari halaman ini dan status berubah menjadi "Minted" di Data Ijazah.`);
+
+        alert(`✅ Ijazah berhasil di-mint!\nData akan hilang dari halaman ini dan status berubah menjadi \"Minted\" di Data Ijazah.`);
       } else {
-        throw new Error(response.message || 'Gagal mengupdate status mint');
+        console.error('MintDiploma API failed:', response);
+        alert('❌ Gagal melakukan minting. Coba lagi nanti.');
       }
-      
-    } catch (error: any) {
-      console.error('Error minting to blockchain:', error);
-      alert(`❌ Gagal mengupdate status mint: ${error.message}`);
-      setMintStep('idle');
+    } catch (error) {
+      console.error('Minting failed:', error);
+      setMintProgress(prev => ({ ...prev, isMinting: false }));
+      alert('❌ Gagal melakukan minting. Coba lagi nanti.');
     }
   };
 

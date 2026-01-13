@@ -43,6 +43,24 @@ export default function MintPopup({
   onMintToBlockchain,
   onClose
 }: MintPopupProps) {
+  // Validate currentMintingItem
+  if (!currentMintingItem) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">❌ Data Tidak Tersedia</h3>
+          <p className="text-gray-600">Data untuk proses minting tidak ditemukan. Silakan coba lagi.</p>
+          <button
+            onClick={onClose}
+            className="mt-4 w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -74,7 +92,7 @@ export default function MintPopup({
               </div>
               
               <p className="text-gray-600 mb-4">
-                Simulasi upload ijazah <strong>{currentMintingItem?.namaMahasiswa}</strong> ke IPFS...
+                Simulasi upload ijazah <strong>{currentMintingItem.namaMahasiswa || 'Nama tidak tersedia'}</strong> ke IPFS...
               </p>
               
               {!mintProgress.isUploading ? (
@@ -166,15 +184,15 @@ export default function MintPopup({
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Nama Mahasiswa:</span>
-                      <span className="font-medium">{currentMintingItem?.namaMahasiswa}</span>
+                      <span className="font-medium">{currentMintingItem.namaMahasiswa}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">NIM:</span>
-                      <span className="font-mono">{currentMintingItem?.npm}</span>
+                      <span className="font-mono">{currentMintingItem.npm}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Certificate ID:</span>
-                      <span className="font-mono">{currentMintingItem?.certificateId}</span>
+                      <span className="font-mono">{currentMintingItem.certificateId}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
@@ -231,7 +249,7 @@ export default function MintPopup({
                 🎉 Simulasi Berhasil!
               </h3>
               <p className="text-gray-600 mb-4">
-                Ijazah <strong>{currentMintingItem?.namaMahasiswa}</strong> berhasil di-mint (simulasi)!
+                Ijazah <strong>{currentMintingItem.namaMahasiswa}</strong> berhasil di-mint (simulasi)!
               </p>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -249,19 +267,19 @@ export default function MintPopup({
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Nama:</span>
-                  <span className="font-medium">{currentMintingItem?.namaMahasiswa}</span>
+                  <span className="font-medium">{currentMintingItem.namaMahasiswa}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">NIM:</span>
-                  <span className="font-mono">{currentMintingItem?.npm}</span>
+                  <span className="font-mono">{currentMintingItem.npm}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Certificate ID:</span>
-                  <span className="font-mono">{currentMintingItem?.certificateId}</span>
+                  <span className="font-mono">{currentMintingItem.certificateId}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Token ID:</span>
-                  <span className="font-mono">{currentMintingItem?.tokenID || 'Generated after mint'}</span>
+                  <span className="font-mono">{currentMintingItem.tokenID || 'Generated after mint'}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Status:</span>
