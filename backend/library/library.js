@@ -26,5 +26,5 @@ async function pinJSONToPinata(json) {
     },
   });
 
-  return res.data.IpfsHash; // CID
+  return res.data.IpfsHash; // CIDs
 }
