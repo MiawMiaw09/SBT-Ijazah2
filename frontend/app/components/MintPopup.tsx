@@ -1,10 +1,29 @@
 "use client";
 
-import { IjazahData, MintStep } from '../types/ijazah';
+import { MintStep } from '../types/ijazah';
+
+// Interface yang sesuai dengan API Diploma
+interface PopupDiplomaData {
+  id: number;
+  namaMahasiswa: string;
+  npm: string;
+  programStudi: string;
+  fakultas?: string;
+  gelarAkademik: string;
+  tanggalKelulusan: string;
+  tahunLulus: string;
+  walletAddress?: string;
+  ipfs: string;
+  alamatPenerbit?: string;
+  tokenID?: string;
+  certificateId: string;
+  status: 'Pending' | 'Minted';
+  selected: boolean;
+}
 
 interface MintPopupProps {
   mintStep: MintStep;
-  currentMintingItem: IjazahData | null;
+  currentMintingItem: PopupDiplomaData | null;
   mintProgress: {
     isUploading: boolean;
     uploadProgress: number;
@@ -109,7 +128,7 @@ export default function MintPopup({
                 <li>Proses ini hanya simulasi (sandbox mode)</li>
                 <li>CID yang dihasilkan adalah dummy/random</li>
                 <li>Tidak ada biaya atau upload nyata</li>
-                <li>Data tetap tersimpan di local storage</li>
+                <li>Data tersimpan ke Database MySQL</li>
               </ul>
             </div>
           </div>
@@ -150,12 +169,16 @@ export default function MintPopup({
                       <span className="font-medium">{currentMintingItem?.namaMahasiswa}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Token ID:</span>
-                      <span className="font-mono">{currentMintingItem?.tokenID}</span>
+                      <span className="text-gray-600">NIM:</span>
+                      <span className="font-mono">{currentMintingItem?.npm}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Certificate ID:</span>
+                      <span className="font-mono">{currentMintingItem?.certificateId}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
-                      <span className="font-medium text-yellow-600">Pending → Minted</span>
+                      <span className="font-medium text-yellow-600">Verified → Minted</span>
                     </div>
                   </div>
                 </div>
@@ -193,16 +216,6 @@ export default function MintPopup({
                 )}
               </div>
             </div>
-            
-            <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-              <p className="font-medium mb-1">⚠️ Mode Sandbox:</p>
-              <ul className="list-disc ml-4 space-y-1">
-                <li>Tidak ada transaksi blockchain nyata</li>
-                <li>Tidak ada pembayaran gas fee</li>
-                <li>Status akan berubah menjadi "Minted" di sistem</li>
-                <li>Data tetap di local storage</li>
-              </ul>
-            </div>
           </div>
         )}
         
@@ -227,7 +240,7 @@ export default function MintPopup({
                   <div>
                     <p className="font-medium text-blue-800">Mode Sandbox Aktif</p>
                     <p className="text-sm text-blue-600 mt-1">
-                      Ini hanya simulasi. Status berubah menjadi "Minted" di sistem.
+                      Status berubah menjadi "Minted" di database MySQL.
                     </p>
                   </div>
                 </div>
@@ -235,23 +248,25 @@ export default function MintPopup({
               
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Nama Mahasiswa:</span>
+                  <span className="text-gray-700">Nama:</span>
                   <span className="font-medium">{currentMintingItem?.namaMahasiswa}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-700">NIM:</span>
+                  <span className="font-mono">{currentMintingItem?.npm}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-700">Certificate ID:</span>
+                  <span className="font-mono">{currentMintingItem?.certificateId}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Token ID:</span>
-                  <span className="font-mono">{currentMintingItem?.tokenID}</span>
+                  <span className="font-mono">{currentMintingItem?.tokenID || 'Generated after mint'}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Status:</span>
                   <span className="font-medium text-green-600">MINTED</span>
                 </div>
-              </div>
-              
-              <div className="text-sm text-gray-500 mb-6">
-                <p>✅ Status berubah menjadi "Minted" di sistem</p>
-                <p>✅ Data tetap tersimpan di local storage</p>
-                <p>✅ Halaman akan otomatis refresh</p>
               </div>
               
               <button
@@ -260,11 +275,6 @@ export default function MintPopup({
               >
                 Tutup & Lanjutkan
               </button>
-              
-              <p className="text-xs text-gray-400 mt-4">
-                Catatan: Ini hanya simulasi untuk tujuan pengembangan.
-                Untuk produksi, hubungkan dengan wallet dan smart contract nyata.
-              </p>
             </div>
           </div>
         )}
