@@ -168,8 +168,7 @@ module.exports = (sequelize, DataTypes) => {
     // Data Sistem
     certificate_id: {
       type: DataTypes.STRING(50),
-      allowNull: true,
-      unique: true
+      allowNull: true
     },
     
     status: {

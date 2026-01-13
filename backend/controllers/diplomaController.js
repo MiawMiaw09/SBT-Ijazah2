@@ -3,6 +3,7 @@ const Diploma = db.Diploma;
 const { generateFileHash } = require('../middleware/uploadMiddleware');
 const fs = require('fs');
 const path = require('path');
+const { pinFileToPinata } = require('../library/library');
 
 // @desc    Upload ijazah baru
 // @route   POST /api/diplomas/upload
@@ -51,6 +52,9 @@ exports.uploadDiploma = async (req, res) => {
       }
     }
 
+    // upload to pinata
+
+    
     // Buat data diploma
     const diplomaData = {
       nama_lengkap: req.body.nama_lengkap,
@@ -70,11 +74,11 @@ exports.uploadDiploma = async (req, res) => {
       tipe_file: req.file.mimetype,
       file_hash: fileHash,
       uploaded_by: req.body.uploaded_by || 'user',
-      status: 'pending'
+      status: 'pending',
+      uri: ''
     };
 
-    // Simpan ke database
-    const diploma = await Diploma.create(diplomaData);
+    console.log('📝 Creating diploma with data:', diplomaData);
 
     res.status(201).json({
       success: true,

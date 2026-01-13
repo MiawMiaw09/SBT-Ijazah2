@@ -21,7 +21,7 @@ const syncDatabase = async (force = false, alter = true) => {
     
     await sequelize.sync({ 
       force: force,
-      alter: alter
+      alter: true
     });
     
     console.log('✅ Database berhasil disinkronisasi!');
