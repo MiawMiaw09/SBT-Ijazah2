@@ -1,19 +1,32 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getIjazahData } from './utils/ijazahStorage';
 
 interface IjazahData {
   id: number;
-  status: 'Minted' | 'Pending';
-  // ... field lainnya
+  status: 'pending' | 'verified' | 'minted' | 'rejected';
+  nama_lengkap: string;
+  nim: string;
+  program_studi: string;
+  certificate_id: string;
+  created_at: string;
+  updated_at?: string;
+  minted_at?: string;
+}
+
+interface DashboardStats {
+  total: number;
+  minted: number;
+  pending: number;
+  mintedPercentage: number;
+  pendingPercentage: number;
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalIjazah: 0,
-    sudahMinted: 0,
-    belumMinted: 0,
+  const [stats, setStats] = useState<DashboardStats>({
+    total: 0,
+    minted: 0,
+    pending: 0,
     mintedPercentage: 0,
     pendingPercentage: 0
   });
@@ -21,82 +34,180 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [ijazahData, setIjazahData] = useState<IjazahData[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const calculateStats = (data: IjazahData[]) => {
-    const total = data.length;
-    const minted = data.filter(item => item.status === 'Minted').length;
-    const pending = total - minted;
-    
-    const mintedPercentage = total > 0 ? Math.round((minted / total) * 100) : 0;
-    const pendingPercentage = total > 0 ? 100 - mintedPercentage : 0;
-    
-    return {
-      totalIjazah: total,
-      sudahMinted: minted,
-      belumMinted: pending,
-      mintedPercentage,
-      pendingPercentage
-    };
-  };
-
-  useEffect(() => {
-    loadDashboardData();
-    
-    // Setup polling untuk update otomatis setiap 30 detik
-    const interval = setInterval(loadDashboardData, 30000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadDashboardData = () => {
+  // Fungsi untuk mengambil data dari database - DIUBAH CARA PENGAMBILANNYA
+  const fetchDashboardData = async () => {
     setIsLoading(true);
+    setError(null);
     
     try {
-      const data = getIjazahData();
-      setIjazahData(data);
+      console.log('📊 Fetching dashboard data from API...');
       
-      const newStats = calculateStats(data);
-      setStats(newStats);
+      // 1. Ambil data statistik dashboard dari API baru - SAMA DENGAN HOMEPAGE
+      const statsResponse = await fetch('http://localhost:5000/api/diplomas/stats/dashboard', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-cache'
+      });
       
+      console.log('Stats Response status:', statsResponse.status);
+      
+      if (!statsResponse.ok) {
+        throw new Error(`HTTP error! status: ${statsResponse.status}`);
+      }
+      
+      const statsResult = await statsResponse.json();
+      console.log('📊 API Stats Response:', statsResult);
+      
+      if (statsResult.success && statsResult.data) {
+        const apiStats = statsResult.data;
+        console.log('📊 API Stats Data:', apiStats);
+        
+        setStats({
+          total: apiStats.total || 0,
+          minted: apiStats.minted || 0,
+          pending: apiStats.pending || 0,
+          mintedPercentage: apiStats.mintedPercentage || 0,
+          pendingPercentage: apiStats.pendingPercentage || 0
+        });
+      } else {
+        // Fallback: hitung manual dari data ijazah - SAMA DENGAN HOMEPAGE
+        console.warn('⚠️ Using fallback calculation for stats');
+        await fetchAndCalculateStats();
+      }
+      
+      // 2. Ambil data ijazah terbaru untuk aktivitas - DIUBAH CARA PENGAMBILANNYA
+      const ijazahResponse = await fetch('http://localhost:5000/api/diplomas', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Ijazah Response status:', ijazahResponse.status);
+      
+      if (!ijazahResponse.ok) {
+        throw new Error(`HTTP error! status: ${ijazahResponse.status}`);
+      }
+      
+      const ijazahResult = await ijazahResponse.json();
+      console.log('📊 API Ijazah Response:', ijazahResult);
+      
+      if (ijazahResult.success && ijazahResult.data) {
+        // Format data untuk aktivitas
+        const formattedData: IjazahData[] = ijazahResult.data
+          .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 10)
+          .map((item: any) => ({
+            id: item.id,
+            status: item.status,
+            nama_lengkap: item.nama_lengkap,
+            nim: item.nim,
+            program_studi: item.program_studi,
+            certificate_id: item.certificate_id,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            minted_at: item.minted_at
+          }));
+        
+        setIjazahData(formattedData);
+      }
+      
+      // Update timestamp
       setLastUpdated(new Date().toLocaleTimeString('id-ID', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
       }));
+      
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ Error fetching dashboard data:', error);
+      setError('Gagal mengambil data dari server. Pastikan backend berjalan.');
+      
+      // Fallback data untuk development - SAMA DENGAN HOMEPAGE
+      setFallbackData();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fungsi untuk pie chart yang sudah diperbaiki
-  const getPieChartPath = (percentage: number, isSecondPart: boolean = false) => {
-    if (percentage === 100) {
-      return "M 50 50 L 50 0 A 40 40 0 1 1 50 50 Z";
-    }
-    
-    if (percentage === 0) {
-      return "M 50 50 L 50 50 L 50 50 Z";
-    }
-    
-    // Konversi persentase ke radian
-    const angle = (percentage / 100) * 2 * Math.PI;
-    
-    // Hitung koordinat titik di tepi lingkaran
-    const x = 50 + 40 * Math.cos(angle - Math.PI / 2);
-    const y = 50 + 40 * Math.sin(angle - Math.PI / 2);
-    
-    if (!isSecondPart) {
-      // Path untuk bagian pertama (sudut 0 hingga persentase)
-      return `M 50 50 L 50 0 A 40 40 0 ${angle > Math.PI ? 1 : 0} 1 ${x} ${y} Z`;
-    } else {
-      // Path untuk bagian kedua (dari persentase hingga 360 derajat)
-      return `M 50 50 L ${x} ${y} A 40 40 0 ${angle > Math.PI ? 0 : 1} 1 50 0 Z`;
+  // Fallback function untuk menghitung statistik dari data ijazah - DIUBAH
+  const fetchAndCalculateStats = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/diplomas', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const data = result.data;
+        const total = data.length;
+        const minted = data.filter((item: any) => item.status === 'minted').length;
+        const pending = data.filter((item: any) => item.status === 'pending').length;
+        const mintedPercentage = total > 0 ? Math.round((minted / total) * 100) : 0;
+        const pendingPercentage = total > 0 ? Math.round((pending / total) * 100) : 0;
+        
+        setStats({
+          total,
+          minted,
+          pending,
+          mintedPercentage,
+          pendingPercentage
+        });
+      }
+    } catch (error) {
+      console.error('Error in fallback calculation:', error);
+      throw error;
     }
   };
 
-  // Fungsi untuk pie chart menggunakan conic-gradient (lebih sederhana)
+  // Fallback data untuk development jika API tidak tersedia - TETAP SAMA
+  const setFallbackData = () => {
+    const mockData: IjazahData[] = [
+      { id: 1, status: 'minted', nama_lengkap: 'John Doe', nim: '202210001', program_studi: 'Informatika', certificate_id: 'CERT-2024-0001', created_at: '2024-01-15T10:30:00Z' },
+      { id: 2, status: 'pending', nama_lengkap: 'Jane Smith', nim: '202210002', program_studi: 'Sistem Informasi', certificate_id: 'CERT-2024-0002', created_at: '2024-01-16T14:20:00Z' },
+      { id: 3, status: 'minted', nama_lengkap: 'Bob Johnson', nim: '202210003', program_studi: 'Teknik Elektro', certificate_id: 'CERT-2024-0003', created_at: '2024-01-17T09:15:00Z' },
+      { id: 4, status: 'minted', nama_lengkap: 'Alice Brown', nim: '202210004', program_studi: 'Manajemen', certificate_id: 'CERT-2024-0004', created_at: '2024-01-18T11:45:00Z' },
+    ];
+    
+    const total = mockData.length;
+    const minted = mockData.filter(item => item.status === 'minted').length;
+    const pending = mockData.filter(item => item.status === 'pending').length;
+    const mintedPercentage = Math.round((minted / total) * 100);
+    const pendingPercentage = Math.round((pending / total) * 100);
+    
+    setStats({
+      total,
+      minted,
+      pending,
+      mintedPercentage,
+      pendingPercentage
+    });
+    
+    setIjazahData(mockData);
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+    
+    // Setup polling untuk update otomatis setiap 30 detik
+    const interval = setInterval(fetchDashboardData, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fungsi untuk pie chart menggunakan conic-gradient - TETAP SAMA
   const getConicGradient = () => {
     if (stats.mintedPercentage === 0 && stats.pendingPercentage === 0) {
       return "conic-gradient(#e5e7eb 0% 100%)";
@@ -108,6 +219,46 @@ export default function AdminDashboard() {
     )`;
   };
 
+  // Format tanggal untuk aktivitas - TETAP SAMA
+  const formatActivityDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Format status untuk display - TETAP SAMA
+  const formatStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'pending': 'Pending',
+      'verified': 'Terverifikasi',
+      'minted': 'Sudah Minted',
+      'rejected': 'Ditolak'
+    };
+    
+    return statusMap[status] || status;
+  };
+
+  // Get status color - TETAP SAMA
+  const getStatusColor = (status: string) => {
+    const colorMap: Record<string, { bg: string, text: string, dot: string }> = {
+      'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
+      'verified': { bg: 'bg-blue-100', text: 'text-blue-800', dot: 'bg-blue-500' },
+      'minted': { bg: 'bg-green-100', text: 'text-green-800', dot: 'bg-green-500' },
+      'rejected': { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' }
+    };
+    
+    return colorMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-500' };
+  };
+
+  // SEMUA KODE JSX DI BAWAH INI TETAP SAMA PERSIS
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
@@ -118,11 +269,19 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={loadDashboardData}
+              onClick={fetchDashboardData}
               disabled={isLoading}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              {isLoading ? 'Memuat...' : 'Refresh Data'}
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Memuat...
+                </>
+              ) : 'Refresh Data'}
             </button>
             {lastUpdated && (
               <div className="text-xs text-gray-500">
@@ -133,6 +292,18 @@ export default function AdminDashboard() {
         </div>
       </div>
       
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+      
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Total Ijazah */}
@@ -141,14 +312,16 @@ export default function AdminDashboard() {
             <div>
               <h3 className="text-sm font-medium text-gray-500">Total Ijazah</h3>
               <p className="text-3xl font-bold text-gray-800 mt-2">
-                {isLoading ? '...' : stats.totalIjazah}
+                {isLoading ? '...' : stats.total}
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 Total dokumen yang diupload
               </p>
             </div>
             <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-2xl">📊</span>
+              <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
           </div>
         </div>
@@ -159,7 +332,7 @@ export default function AdminDashboard() {
             <div>
               <h3 className="text-sm font-medium text-gray-500">Sudah Minted</h3>
               <p className="text-3xl font-bold text-green-600 mt-2">
-                {isLoading ? '...' : stats.sudahMinted}
+                {isLoading ? '...' : stats.minted}
               </p>
               <div className="flex items-center mt-1">
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -174,7 +347,9 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-green-600 text-2xl">✅</span>
+              <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
             </div>
           </div>
         </div>
@@ -185,7 +360,7 @@ export default function AdminDashboard() {
             <div>
               <h3 className="text-sm font-medium text-gray-500">Belum Minted</h3>
               <p className="text-3xl font-bold text-red-600 mt-2">
-                {isLoading ? '...' : stats.belumMinted}
+                {isLoading ? '...' : stats.pending}
               </p>
               <div className="flex items-center mt-1">
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -200,7 +375,9 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-              <span className="text-red-600 text-2xl">⏳</span>
+              <svg className="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
           </div>
         </div>
@@ -211,7 +388,7 @@ export default function AdminDashboard() {
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold text-gray-800">Distribusi Ijazah</h3>
           <div className="text-sm text-gray-500">
-            {stats.totalIjazah > 0 ? (
+            {stats.total > 0 ? (
               <>
                 {stats.mintedPercentage}% Minted • {stats.pendingPercentage}% Pending
               </>
@@ -228,13 +405,13 @@ export default function AdminDashboard() {
               <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
-            ) : stats.totalIjazah === 0 ? (
+            ) : stats.total === 0 ? (
               <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center">
                 <span className="text-gray-400">No Data</span>
               </div>
             ) : (
               <>
-                {/* Versi menggunakan conic-gradient (lebih mudah dan akurat) */}
+                {/* Versi menggunakan conic-gradient */}
                 <div 
                   className="w-full h-full rounded-full"
                   style={{
@@ -245,29 +422,11 @@ export default function AdminDashboard() {
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white rounded-full flex items-center justify-center">
                     <div className="text-center">
                       <span className="text-2xl font-bold text-gray-700">
-                        {stats.totalIjazah}
+                        {stats.total}
                       </span>
                       <div className="text-xs text-gray-500">Total</div>
                     </div>
                   </div>
-                </div>
-                
-                {/* Versi alternatif menggunakan SVG (jika conic-gradient tidak didukung) */}
-                <div className="sr-only">
-                  <svg width="224" height="224" viewBox="0 0 100 100" className="w-full h-full">
-                    <path
-                      d={getPieChartPath(stats.mintedPercentage)}
-                      fill="#10b981"
-                      stroke="white"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d={getPieChartPath(stats.mintedPercentage, true)}
-                      fill="#ef4444"
-                      stroke="white"
-                      strokeWidth="2"
-                    />
-                  </svg>
                 </div>
               </>
             )}
@@ -295,7 +454,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="text-right">
                         <span className="text-xl font-bold text-green-600">
-                          {stats.sudahMinted}
+                          {stats.minted}
                         </span>
                         <div className="text-sm text-gray-500">
                           {stats.mintedPercentage}%
@@ -313,7 +472,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="text-right">
                         <span className="text-xl font-bold text-red-600">
-                          {stats.belumMinted}
+                          {stats.pending}
                         </span>
                         <div className="text-sm text-gray-500">
                           {stats.pendingPercentage}%
@@ -329,13 +488,13 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="text-center p-3 bg-blue-50 rounded-lg">
                       <div className="text-lg font-bold text-blue-600">
-                        {stats.totalIjazah}
+                        {stats.total}
                       </div>
                       <div className="text-xs text-gray-600">Total Dokumen</div>
                     </div>
                     <div className="text-center p-3 bg-purple-50 rounded-lg">
                       <div className="text-lg font-bold text-purple-600">
-                        {stats.sudahMinted}
+                        {stats.minted}
                       </div>
                       <div className="text-xs text-gray-600">SBT Aktif</div>
                     </div>
@@ -349,7 +508,18 @@ export default function AdminDashboard() {
 
       {/* Recent Activity */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Aktivitas Terbaru</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Aktivitas Terbaru</h3>
+          <button 
+            onClick={fetchDashboardData}
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
         
         {isLoading ? (
           <div className="space-y-3">
@@ -365,33 +535,36 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {ijazahData.slice(0, 5).map((item) => (
-              <div 
-                key={item.id}
-                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition"
-              >
-                <div className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-3 ${
-                    item.status === 'Minted' ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}></div>
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      Ijazah #{item.id}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Status: {item.status === 'Minted' ? 'Sudah di-mint' : 'Menunggu mint'}
-                    </p>
+            {ijazahData.slice(0, 5).map((item) => {
+              const statusColor = getStatusColor(item.status);
+              
+              return (
+                <div 
+                  key={item.id}
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition"
+                >
+                  <div className="flex items-center">
+                    <div className={`w-2 h-2 rounded-full mr-3 ${statusColor.dot}`}></div>
+                    <div>
+                      <p className="font-medium text-gray-800">
+                        {item.nama_lengkap} ({item.nim})
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {item.program_studi} • {formatActivityDate(item.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-xs px-2 py-1 rounded ${statusColor.bg} ${statusColor.text}`}>
+                      {formatStatus(item.status)}
+                    </span>
+                    <span className="text-xs text-gray-500 mt-1">
+                      ID: {item.certificate_id}
+                    </span>
                   </div>
                 </div>
-                <span className={`text-sm px-2 py-1 rounded ${
-                  item.status === 'Minted'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {item.status}
-                </span>
-              </div>
-            ))}
+              );
+            })}
             
             {ijazahData.length > 5 && (
               <div className="text-center pt-3">

@@ -7,6 +7,7 @@ export interface ApiResponse<T = any> {
   message: string;
   data?: T;
   count?: number;
+  error?: string;
 }
 
 export interface Diploma {
@@ -43,6 +44,28 @@ export interface Diploma {
   minted_by?: string;
 }
 
+// Interface baru untuk dashboard stats dengan data lengkap
+export interface DashboardStats {
+  total: number;
+  pending: number;
+  minted: number;
+  mintedPercentage: number;
+  pendingPercentage: number;
+  percentages?: {
+    minted: string;
+    pending: string;
+  };
+}
+
+// Interface untuk extended dashboard stats
+export interface ExtendedDashboardStats extends DashboardStats {
+  percentages?: {
+    minted: string;
+    pending: string;
+  };
+}
+
+// Interface lama (dipertahankan untuk kompatibilitas)
 export interface Statistics {
   total: number;
   pending: number;
@@ -75,16 +98,22 @@ const apiRequest = async <T>(
 ): Promise<ApiResponse<T>> => {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  console.log(`🌐 [API] Request: ${method} ${url}`);
+  console.log(`🌐 [API] Request: ${method} ${url}`, data || '');
   
   const options: RequestInit = {
     method,
     headers: {},
-    credentials: 'include',
-    mode: 'cors'
+    credentials: 'include' as RequestCredentials,
+    mode: 'cors' as RequestMode
   };
 
-  // Setup Body & Headers
+  // Tambahkan headers umum
+  options.headers = {
+    ...options.headers,
+    'Accept': 'application/json',
+  };
+
+  // Setup Body & Headers berdasarkan tipe data
   if (data && !isFormData) {
     options.headers = {
       ...options.headers,
@@ -92,71 +121,120 @@ const apiRequest = async <T>(
     };
     options.body = JSON.stringify(data);
   } else if (data && isFormData) {
-    // Note: Jangan set Content-Type jika menggunakan FormData, 
-    // browser akan mengaturnya secara otomatis termasuk boundary-nya
+    // FormData: browser akan mengatur Content-Type secara otomatis
     options.body = data;
   }
 
   try {
-    const response = await fetch(url, options);
-    console.log(`📡 [API] Response Status: ${response.status} ${response.statusText}`);
+    console.log(`🌐 [API] Making request to: ${url}`);
+    console.log(`🌐 [API] Request options:`, {
+      method: options.method,
+      headers: options.headers,
+      hasBody: !!options.body
+    });
 
-    // Mendapatkan data respon
-    let result: any;
+    const response = await fetch(url, options);
+    
+    console.log(`📡 [API] Response received:`, {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      url: response.url,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
+    // Mendapatkan dan parsing response
+    let result: any = {};
     const contentType = response.headers.get("content-type");
     
     if (contentType && contentType.includes("application/json")) {
       try {
-        result = await response.json();
+        const text = await response.text();
+        console.log(`📡 [API] Raw JSON response (first 500 chars):`, text.substring(0, 500));
+        
+        if (text) {
+          result = JSON.parse(text);
+        }
       } catch (jsonError) {
         console.error(`❌ [API] JSON Parse Error:`, jsonError);
         throw new Error(`Invalid JSON response from server: ${response.statusText}`);
       }
     } else {
-      const textResponse = await response.text();
-      console.warn(`⚠️ [API] Non-JSON response:`, textResponse.substring(0, 200));
-      result = { message: textResponse };
+      try {
+        const textResponse = await response.text();
+        console.warn(`⚠️ [API] Non-JSON response (first 200 chars):`, textResponse.substring(0, 200));
+        result = { 
+          message: textResponse,
+          raw: textResponse
+        };
+      } catch (textError) {
+        console.error(`❌ [API] Text Parse Error:`, textError);
+        result = { message: `Unable to parse response: ${textError.message}` };
+      }
     }
 
     // Jika response tidak OK (4xx atau 5xx)
     if (!response.ok) {
       console.error(`❌ [API] Server Error ${response.status}:`, result);
-      throw new Error(result.message || result.error || `Error ${response.status}: ${response.statusText}`);
+      
+      const errorMessage = result.message || 
+                          result.error || 
+                          result.details || 
+                          `Error ${response.status}: ${response.statusText}`;
+      
+      throw new Error(errorMessage);
     }
 
-    // Berhasil
-    console.log(`✅ [API] Success:`, result.success, result.message, `Data length:`, result.data?.length || 0);
+    // Berhasil - log success
+    console.log(`✅ [API] Success:`, {
+      success: result.success,
+      message: result.message,
+      hasData: !!result.data,
+      dataType: typeof result.data,
+      dataLength: Array.isArray(result.data) ? result.data.length : 'not array'
+    });
     
     // Standardize response format
     if (result.success !== undefined) {
+      // Jika backend mengembalikan format yang sudah benar
       return result as ApiResponse<T>;
     } else {
       // Jika backend tidak mengembalikan format standard, kita buat sendiri
-      return {
+      const standardizedResponse: ApiResponse<T> = {
         success: true,
-        message: 'Request successful',
+        message: result.message || 'Request successful',
         data: result.data || result,
-        count: result.count || result.data?.length || 0
+        count: result.count || (Array.isArray(result.data) ? result.data.length : undefined)
       };
+      
+      console.log(`🔄 [API] Standardized response:`, standardizedResponse);
+      return standardizedResponse;
     }
 
   } catch (error: any) {
     console.error(`🔥 [API] Request Error (${url}):`, error);
     
+    // Deteksi tipe error
+    let errorMessage = error.message || 'Unknown network or server error';
+    let isNetworkError = false;
+    
     // Cek jika ini adalah network error atau CORS error
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      isNetworkError = true;
+      errorMessage = `Cannot connect to backend server at ${API_BASE_URL}. Please ensure the backend is running.`;
       console.error(`🌐 [API] Network/CORS Error - Backend mungkin tidak berjalan di ${API_BASE_URL}`);
-      return {
-        success: false,
-        message: `Cannot connect to backend server at ${API_BASE_URL}. Please ensure the backend is running.`,
-        data: undefined
-      };
     }
     
-    // Mengembalikan objek ApiResponse standar meskipun terjadi crash/error
+    // Cek jika timeout
+    if (error.name === 'AbortError') {
+      errorMessage = 'Request timeout. Server might be busy or unavailable.';
+    }
+    
+    // Mengembalikan objek ApiResponse standar dengan error
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown network or server error',
+      message: errorMessage,
+      error: errorMessage,
       data: undefined
     };
   }
@@ -167,97 +245,264 @@ const apiRequest = async <T>(
 export const diplomaAPI = {
   // Upload ijazah
   uploadDiploma: async (formData: FormData): Promise<ApiResponse<Diploma>> => {
+    console.log('📤 [API] Uploading diploma...');
     return apiRequest('/diplomas/upload', 'POST', formData, true);
   },
 
   // Ambil data ijazah berdasarkan ID (Digunakan di halaman Mint)
   getDiplomaById: async (id: number): Promise<ApiResponse<Diploma>> => {
+    console.log(`📄 [API] Getting diploma by ID: ${id}`);
     return apiRequest(`/diplomas/${id}`);
   },
 
   // Ambil data ijazah yang berstatus verified untuk dimint
   getPendingDiplomas: async (): Promise<ApiResponse<Diploma[]>> => {
+    console.log('⏳ [API] Getting pending diplomas...');
     return apiRequest('/diplomas/pending');
   },
 
-  // Ambil semua data ijazah - MODIFIED: Robust endpoint handling
+  // Ambil semua data ijazah
   getAllDiplomas: async (): Promise<ApiResponse<Diploma[]>> => {
-    try {
-      console.log('📊 [API] Getting ALL diplomas...');
-      
-      // Coba beberapa endpoint yang mungkin
-      const endpoints = [
-        '/diplomas',           // Standard
-        '/diplomas/all',       // Alternative
-        '/diplomas?status=all' // With query
-      ];
-      
-      let lastError: any = null;
-      
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`🔍 [API] Trying endpoint: ${endpoint}`);
-          const response = await apiRequest<Diploma[]>(endpoint);
-          
-          if (response.success && response.data) {
-            console.log(`✅ [API] Success with endpoint: ${endpoint}, data count: ${response.data.length}`);
-            return response;
-          } else {
-            console.warn(`⚠️ [API] Endpoint ${endpoint} returned no data:`, response.message);
-            lastError = response.message;
-          }
-        } catch (endpointError) {
-          console.warn(`⚠️ [API] Endpoint ${endpoint} failed:`, endpointError);
-          lastError = endpointError;
-        }
-      }
-      
-      // Jika semua endpoint gagal, throw error
-      throw new Error(`All endpoints failed. Last error: ${lastError}`);
-      
-    } catch (error: any) {
-      console.error('❌ [API] getAllDiplomas error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to fetch all diplomas',
-        data: undefined
-      };
-    }
+    console.log('📋 [API] Getting all diplomas...');
+    return apiRequest('/diplomas');
   },
 
   // Cari ijazah berdasarkan NIM
   getDiplomaByNim: async (nim: string): Promise<ApiResponse<Diploma>> => {
+    console.log(`🔍 [API] Getting diploma by NIM: ${nim}`);
     return apiRequest(`/diplomas/nim/${nim}`);
   },
 
   // Verifikasi ijazah
   verifyDiploma: async (id: number): Promise<ApiResponse> => {
+    console.log(`✅ [API] Verifying diploma ID: ${id}`);
     return apiRequest(`/diplomas/verify/${id}`, 'POST');
   },
 
   // Update data setelah minting ke Blockchain
   mintDiploma: async (id: number, mintData: MintData): Promise<ApiResponse> => {
+    console.log(`🪙 [API] Minting diploma ID: ${id}`, mintData);
     return apiRequest(`/diplomas/mint/${id}`, 'PUT', mintData);
   },
 
-  // Statistik dashboard
-  getStatistics: async (): Promise<ApiResponse<Statistics>> => {
-    return apiRequest('/diplomas/stats/dashboard');
+  // Statistik dashboard - LEGACY (untuk kompatibilitas)
+  getStatistics: async (): Promise<ApiResponse<DashboardStats>> => {
+    console.log('📊 [API] Fetching legacy dashboard statistics...');
+    
+    try {
+      const response = await apiRequest('/diplomas/stats');
+      
+      console.log('📊 [API] Legacy statistics response:', {
+        success: response.success,
+        message: response.message,
+        hasData: !!response.data
+      });
+      
+      if (response.success && response.data) {
+        const stats = response.data as any;
+        const dashboardStats: DashboardStats = {
+          total: stats.total || 0,
+          pending: stats.pending || 0,
+          minted: stats.minted || 0,
+          mintedPercentage: 0,
+          pendingPercentage: 0
+        };
+        
+        // Hitung persentase jika ada data
+        if (dashboardStats.total > 0) {
+          dashboardStats.mintedPercentage = Math.round((dashboardStats.minted / dashboardStats.total) * 100);
+          dashboardStats.pendingPercentage = Math.round((dashboardStats.pending / dashboardStats.total) * 100);
+        }
+        
+        console.log('📊 [API] Processed legacy stats:', dashboardStats);
+        
+        return {
+          success: true,
+          message: response.message || 'Legacy statistics fetched successfully',
+          data: dashboardStats
+        };
+      } else {
+        console.warn('⚠️ [API] No legacy statistics data returned');
+        return {
+          success: false,
+          message: response.message || 'No statistics data available',
+          data: undefined
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ [API] Error fetching legacy statistics:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch statistics',
+        data: undefined
+      };
+    }
+  },
+
+  // Statistik dashboard - NEW (dengan endpoint baru dan data lengkap)
+  getDashboardStats: async (): Promise<ApiResponse<ExtendedDashboardStats>> => {
+    console.log('📊 [API] Fetching NEW dashboard statistics...');
+    
+    try {
+      // Gunakan endpoint baru
+      const response = await apiRequest('/diplomas/stats/dashboard');
+      
+      console.log('📊 [API] New dashboard stats response:', {
+        success: response.success,
+        message: response.message,
+        hasData: !!response.data
+      });
+      
+      if (response.success && response.data) {
+        const stats = response.data as any;
+        
+        // Debug log untuk melihat struktur data
+        console.log('📊 [API] Raw stats data structure:', {
+          keys: Object.keys(stats),
+          total: stats.total,
+          minted: stats.minted,
+          pending: stats.pending,
+          hasPercentages: !!stats.percentages,
+          hasMintedPercentage: stats.mintedPercentage !== undefined,
+          hasPendingPercentage: stats.pendingPercentage !== undefined
+        });
+        
+        // Format data sesuai interface
+        const dashboardStats: ExtendedDashboardStats = {
+          total: stats.total || 0,
+          minted: stats.minted || 0,
+          pending: stats.pending || 0,
+          mintedPercentage: stats.mintedPercentage || 0,
+          pendingPercentage: stats.pendingPercentage || 0,
+          percentages: stats.percentages || {
+            minted: `${stats.mintedPercentage || 0}%`,
+            pending: `${stats.pendingPercentage || 0}%`
+          }
+        };
+        
+        // Pastikan persentase dihitung jika tidak ada
+        if (dashboardStats.total > 0) {
+          if (!dashboardStats.mintedPercentage) {
+            dashboardStats.mintedPercentage = Math.round((dashboardStats.minted / dashboardStats.total) * 100);
+          }
+          if (!dashboardStats.pendingPercentage) {
+            dashboardStats.pendingPercentage = Math.round((dashboardStats.pending / dashboardStats.total) * 100);
+          }
+        }
+        
+        console.log('📊 [API] Processed dashboard stats:', dashboardStats);
+        
+        return {
+          success: true,
+          message: response.message || 'Dashboard statistics fetched successfully',
+          data: dashboardStats
+        };
+      } else {
+        console.warn('⚠️ [API] No new dashboard stats data returned, falling back to legacy...');
+        
+        // Fallback ke endpoint lama
+        const legacyResponse = await diplomaAPI.getStatistics();
+        if (legacyResponse.success && legacyResponse.data) {
+          const legacyData = legacyResponse.data;
+          
+          const dashboardStats: ExtendedDashboardStats = {
+            total: legacyData.total,
+            minted: legacyData.minted,
+            pending: legacyData.pending,
+            mintedPercentage: legacyData.mintedPercentage,
+            pendingPercentage: legacyData.pendingPercentage,
+            percentages: {
+              minted: `${legacyData.mintedPercentage}%`,
+              pending: `${legacyData.pendingPercentage}%`
+            }
+          };
+          
+          console.log('📊 [API] Using legacy stats as fallback:', dashboardStats);
+          
+          return {
+            success: true,
+            message: 'Dashboard statistics fetched from legacy endpoint',
+            data: dashboardStats
+          };
+        }
+        
+        console.warn('⚠️ [API] All fallback methods failed');
+        return {
+          success: false,
+          message: response.message || 'No dashboard statistics available',
+          data: undefined
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ [API] Error fetching new dashboard statistics:', error);
+      
+      // Fallback ke data mock jika semua gagal
+      console.log('🔄 [API] Using mock data as final fallback...');
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch dashboard statistics',
+        data: generateMockDashboardStats()
+      };
+    }
   },
   
   // NEW: Get diplomas by status
   getDiplomasByStatus: async (status: string): Promise<ApiResponse<Diploma[]>> => {
+    console.log(`📋 [API] Getting diplomas by status: ${status}`);
     return apiRequest(`/diplomas/status/${status}`);
   },
   
   // NEW: Delete diploma (for admin)
   deleteDiploma: async (id: number): Promise<ApiResponse> => {
+    console.log(`🗑️ [API] Deleting diploma ID: ${id}`);
     return apiRequest(`/diplomas/${id}`, 'DELETE');
   },
   
   // NEW: Update diploma
   updateDiploma: async (id: number, data: Partial<Diploma>): Promise<ApiResponse<Diploma>> => {
+    console.log(`✏️ [API] Updating diploma ID: ${id}`, data);
     return apiRequest(`/diplomas/${id}`, 'PUT', data);
+  },
+
+  // Health check
+  healthCheck: async (): Promise<ApiResponse> => {
+    console.log('🏥 [API] Health check...');
+    return apiRequest('/diplomas/health');
+  },
+
+  // Test connection function
+  testConnection: async (): Promise<ApiResponse> => {
+    console.log('🔌 [API] Testing connection to backend...');
+    try {
+      const response = await fetch(`${API_BASE_URL}/diplomas/health`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      const isOk = response.ok;
+      const status = response.status;
+      
+      if (isOk) {
+        const data = await response.json();
+        return {
+          success: true,
+          message: `Backend is running (Status: ${status})`,
+          data
+        };
+      } else {
+        return {
+          success: false,
+          message: `Backend responded with error (Status: ${status})`,
+          error: `HTTP ${status}`
+        };
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Cannot connect to backend at ${API_BASE_URL}`,
+        error: error.message
+      };
+    }
   }
 };
 
@@ -304,11 +549,25 @@ export const formatDateTime = (dateTimeString: string): string => {
  */
 export const checkBackendAvailability = async (): Promise<boolean> => {
   try {
-    const testResponse = await fetch(`${API_BASE_URL}/diplomas/health`);
-    return testResponse.ok;
-  } catch {
+    console.log('🔍 Checking backend availability...');
+    const testResponse = await fetch(`${API_BASE_URL}/diplomas/health`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      mode: 'cors'
+    });
+    
+    const isAvailable = testResponse.ok;
+    console.log(`🔍 Backend availability: ${isAvailable ? '✅ Available' : '❌ Not available'}`);
+    return isAvailable;
+  } catch (error) {
+    console.error('🔍 Backend check error:', error);
     try {
-      const testResponse = await fetch(`${API_BASE_URL}/diplomas`);
+      // Coba endpoint lain sebagai fallback
+      const testResponse = await fetch(`${API_BASE_URL}/diplomas`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        mode: 'cors'
+      });
       return testResponse.ok;
     } catch {
       return false;
@@ -366,6 +625,29 @@ export const generateMockDiplomas = (count: number = 5): Diploma[] => {
 };
 
 /**
+ * Generate mock dashboard stats
+ */
+export const generateMockDashboardStats = (): ExtendedDashboardStats => {
+  const total = Math.floor(Math.random() * 100) + 50;
+  const minted = Math.floor(total * 0.7);
+  const pending = total - minted;
+  const mintedPercentage = Math.round((minted / total) * 100);
+  const pendingPercentage = Math.round((pending / total) * 100);
+  
+  return {
+    total,
+    minted,
+    pending,
+    mintedPercentage,
+    pendingPercentage,
+    percentages: {
+      minted: `${mintedPercentage}%`,
+      pending: `${pendingPercentage}%`
+    }
+  };
+};
+
+/**
  * Fallback function that returns mock data when API fails
  */
 export const getDiplomasWithFallback = async (): Promise<Diploma[]> => {
@@ -382,5 +664,57 @@ export const getDiplomasWithFallback = async (): Promise<Diploma[]> => {
   } catch (error) {
     console.error('🔥 API failed completely, using mock data:', error);
     return generateMockDiplomas(5);
+  }
+};
+
+/**
+ * Fallback function for dashboard statistics (legacy)
+ */
+export const getStatisticsWithFallback = async (): Promise<DashboardStats> => {
+  try {
+    const response = await diplomaAPI.getStatistics();
+    
+    if (response.success && response.data) {
+      console.log(`✅ Using real statistics data:`, response.data);
+      return response.data;
+    } else {
+      console.warn('⚠️ Statistics API returned no data, using mock data');
+      return {
+        total: 150,
+        pending: 45,
+        minted: 105,
+        mintedPercentage: 70,
+        pendingPercentage: 30
+      };
+    }
+  } catch (error) {
+    console.error('🔥 Statistics API failed completely, using mock data:', error);
+    return {
+      total: 150,
+      pending: 45,
+      minted: 105,
+      mintedPercentage: 70,
+      pendingPercentage: 30
+    };
+  }
+};
+
+/**
+ * Fallback function for NEW dashboard statistics
+ */
+export const getDashboardStatsWithFallback = async (): Promise<ExtendedDashboardStats> => {
+  try {
+    const response = await diplomaAPI.getDashboardStats();
+    
+    if (response.success && response.data) {
+      console.log(`✅ Using new dashboard stats:`, response.data);
+      return response.data;
+    } else {
+      console.warn('⚠️ New dashboard stats API returned no data, using mock data');
+      return generateMockDashboardStats();
+    }
+  } catch (error) {
+    console.error('🔥 New dashboard stats API failed completely, using mock data:', error);
+    return generateMockDashboardStats();
   }
 };

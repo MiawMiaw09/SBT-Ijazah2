@@ -34,11 +34,17 @@ router.get('/verify/:nim', diplomaController.verifyDiploma);
 // @desc    Mark ijazah sebagai minted (SBT)
 router.put('/mint/:id', diplomaController.mintDiploma);
 
-// @route   GET /api/diplomas/stats/dashboard
-// @desc    Get statistics untuk dashboard
-router.get('/stats/dashboard', diplomaController.getStatistics);
+// ========== STATISTICS ROUTES ==========
 
-// ========== ROUTE BARU ==========
+// @route   GET /api/diplomas/stats/dashboard
+// @desc    Get dashboard statistics (dengan persentase)
+router.get('/stats/dashboard', diplomaController.getDashboardStats);
+
+// @route   GET /api/diplomas/stats
+// @desc    Get basic statistics (tanpa persentase)
+router.get('/stats', diplomaController.getStatistics);
+
+// ========== CRUD & UTILITY ROUTES ==========
 
 // @route   DELETE /api/diplomas/:id
 // @desc    Hapus ijazah (hard delete)

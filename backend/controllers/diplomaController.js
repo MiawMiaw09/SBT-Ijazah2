@@ -4,6 +4,8 @@ const { generateFileHash } = require('../middleware/uploadMiddleware');
 const fs = require('fs');
 const path = require('path');
 
+// ========== FUNGSI UTAMA ==========
+
 // @desc    Upload ijazah baru
 // @route   POST /api/diplomas/upload
 // @access  Public
@@ -308,7 +310,7 @@ exports.mintDiploma = async (req, res) => {
   }
 };
 
-// @desc    Get statistics untuk dashboard
+// @desc    Get statistics untuk dashboard (LEGACY - untuk kompatibilitas)
 // @route   GET /api/diplomas/stats
 // @access  Public
 exports.getStatistics = async (req, res) => {
@@ -316,23 +318,18 @@ exports.getStatistics = async (req, res) => {
     const total = await Diploma.count();
     const pending = await Diploma.count({ where: { status: 'pending' } });
     const minted = await Diploma.count({ where: { status: 'minted' } });
-    const verified = await Diploma.count({ where: { status: 'verified' } });
 
     res.json({
       success: true,
       data: {
         total,
         pending,
-        minted,
-        verified,
-        percentages: {
-          pending: total > 0 ? ((pending / total) * 100).toFixed(1) : 0,
-          minted: total > 0 ? ((minted / total) * 100).toFixed(1) : 0,
-          verified: total > 0 ? ((verified / total) * 100).toFixed(1) : 0
-        }
+        minted
       }
     });
+
   } catch (error) {
+    console.error("Dashboard Stats Error:", error);
     res.status(500).json({
       success: false,
       message: 'Error fetching statistics',
@@ -341,7 +338,59 @@ exports.getStatistics = async (req, res) => {
   }
 };
 
-// ========== TAMBAHAN FUNGSI BARU ==========
+// @desc    Get statistics untuk dashboard (NEW - dengan format lengkap)
+// @route   GET /api/diplomas/stats/dashboard
+// @access  Public
+exports.getDashboardStats = async (req, res) => {
+  try {
+    console.log("📊 Fetching dashboard statistics...");
+    
+    const total = await Diploma.count();
+    const minted = await Diploma.count({ where: { status: 'minted' } });
+    const pending = await Diploma.count({ where: { status: 'pending' } });
+    
+    // Hitung persentase
+    const mintedPercentage = total > 0 ? Math.round((minted / total) * 100) : 0;
+    const pendingPercentage = total > 0 ? Math.round((pending / total) * 100) : 0;
+    
+    const data = {
+      total,
+      minted,
+      pending,
+      mintedPercentage,
+      pendingPercentage,
+      percentages: {
+        minted: `${mintedPercentage}%`,
+        pending: `${pendingPercentage}%`
+      }
+    };
+    
+    console.log("📊 Dashboard stats:", data);
+    console.log("📊 Dashboard stats response:", {
+      total,
+      minted,
+      pending,
+      mintedPercentage,
+      pendingPercentage
+    });
+    
+    res.json({
+      success: true,
+      message: 'Dashboard statistics fetched successfully',
+      data: data
+    });
+
+  } catch (error) {
+    console.error("❌ Dashboard Stats Error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching dashboard statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : {}
+    });
+  }
+};
+
+// ========== FUNGSI TAMBAHAN ==========
 
 // @desc    Delete diploma by ID
 // @route   DELETE /api/diplomas/:id
