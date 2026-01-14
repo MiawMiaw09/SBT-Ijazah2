@@ -57,8 +57,10 @@ exports.uploadDiploma = async (req, res) => {
     const diplomaData = {
       nama_lengkap: req.body.nama_lengkap,
       npm: req.body.npm,
+      nik: req.body.nik,
       program_studi: req.body.program_studi,
       gelar_akademik: req.body.gelar_akademik,
+      tempat_tanggal_lahir: req.body.tempat_tanggal_lahir,
       fakultas: req.body.fakultas,
       tanggal_lulus: tanggalLulus,
       ipk: req.body.ipk ? parseFloat(req.body.ipk) : null,
@@ -203,8 +205,10 @@ exports.verifyDiploma = async (req, res) => {
       data: {
         nama_lengkap: diploma.nama_lengkap,
         npm: diploma.npm,
+        nik: diploma.nik,
         program_studi: diploma.program_studi,
         gelar_akademik: diploma.gelar_akademik,
+        tempat_tanggal_lahir: diploma.tempat_tanggal_lahir,
         tanggal_lulus: diploma.getFormattedDate ? diploma.getFormattedDate() : diploma.tanggal_lulus,
         status: diploma.status,
         certificate_id: diploma.certificate_id,
@@ -293,7 +297,7 @@ exports.mintDiploma = async (req, res) => {
       message: 'Ijazah berhasil di-mark sebagai minted',
       data: {
         id: diploma.id,
-        nim: diploma.nim,
+        npm: diploma.npm,
         certificate_id: diploma.certificate_id,
         status: diploma.status,
         transaction_hash: diploma.transaction_hash,
@@ -424,7 +428,7 @@ exports.deleteDiploma = async (req, res) => {
     const diplomaInfo = {
       id: diploma.id,
       nama_lengkap: diploma.nama_lengkap,
-      nim: diploma.nim,
+      npm: diploma.npm,
       certificate_id: diploma.certificate_id,
       file_path: diploma.path_file
     };

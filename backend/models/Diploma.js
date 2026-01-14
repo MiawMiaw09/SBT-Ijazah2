@@ -14,10 +14,20 @@ module.exports = (sequelize, DataTypes) => {
     npm: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      unique: true,
+      // HAPUS unique: true di sini, pindah ke indexes
       validate: {
         notEmpty: {
           msg: 'NPM tidak boleh kosong'
+        }
+      }
+    },
+
+    nik: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          msg: 'NIK tidak boleh kosong'
         }
       }
     },
@@ -38,6 +48,16 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         notEmpty: {
           msg: 'Gelar akademik tidak boleh kosong'
+        }
+      }
+    },
+
+    tempat_tanggal_lahir: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      validate: {
+        notEmpty: {
+          msg: 'Tempat tanggal lahir tidak boleh kosong'
         }
       }
     },
@@ -156,7 +176,7 @@ module.exports = (sequelize, DataTypes) => {
     file_hash: {
       type: DataTypes.STRING(64),
       allowNull: false,
-      unique: true,
+      // HAPUS unique: true di sini, pindah ke indexes
       validate: {
         len: {
           args: [64, 64],
@@ -169,7 +189,7 @@ module.exports = (sequelize, DataTypes) => {
     certificate_id: {
       type: DataTypes.STRING(50),
       allowNull: true,
-      unique: true
+      // HAPUS unique: true di sini, pindah ke indexes
     },
     
     status: {
@@ -210,6 +230,39 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     
+    // TAMBAHKAN INDEXES MANUAL (hanya yang penting)
+    indexes: [
+      // Hanya 3 unique indexes yang benar-benar diperlukan
+      {
+        unique: true,
+        fields: ['npm'],
+        name: 'idx_npm_unique'
+      },
+      {
+        unique: true,
+        fields: ['file_hash'],
+        name: 'idx_file_hash_unique'
+      },
+      {
+        unique: true,
+        fields: ['certificate_id'],
+        name: 'idx_certificate_id_unique'
+      },
+      // Non-unique indexes untuk pencarian cepat
+      {
+        fields: ['status'],
+        name: 'idx_status'
+      },
+      {
+        fields: ['created_at'],
+        name: 'idx_created_at'
+      },
+      {
+        fields: ['tanggal_lulus'],
+        name: 'idx_tanggal_lulus'
+      }
+    ],
+    
     hooks: {
       beforeCreate: (diploma, options) => {
         // Generate certificate ID otomatis
@@ -227,6 +280,16 @@ module.exports = (sequelize, DataTypes) => {
             diploma.tanggal_lulus = `${parts[2]}-${parts[1]}-${parts[0]}`;
           }
         }
+      },
+      
+      beforeUpdate: (diploma, options) => {
+        // Format tanggal saat update juga
+        if (diploma.tanggal_lulus && typeof diploma.tanggal_lulus === 'string' && diploma.tanggal_lulus.includes('/')) {
+          const parts = diploma.tanggal_lulus.split('/');
+          if (parts.length === 3) {
+            diploma.tanggal_lulus = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
       }
     },
     
@@ -237,7 +300,7 @@ module.exports = (sequelize, DataTypes) => {
       minted: {
         where: { status: 'minted' }
       },
-      byNim: function(npm) {
+      byNpm: function(npm) {
         return {
           where: { npm: npm }
         };
@@ -262,7 +325,7 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   // Class methods
-  Diploma.findByNim = async function(npm) {
+  Diploma.findByNpm = async function(npm) {
     return await this.findOne({ where: { npm: npm } });
   };
 
