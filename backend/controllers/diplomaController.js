@@ -34,13 +34,13 @@ exports.uploadDiploma = async (req, res) => {
       });
     }
 
-    // Cek apakah NIM sudah ada
-    const existingNIM = await Diploma.findOne({ where: { nim: req.body.nim } });
-    if (existingNIM) {
+    // Cek apakah NPM sudah ada
+    const existingNPM = await Diploma.findOne({ where: { npm: req.body.npm } });
+    if (existingNPM) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: 'NIM sudah terdaftar'
+        message: 'NPM sudah terdaftar'
       });
     }
 
@@ -56,7 +56,7 @@ exports.uploadDiploma = async (req, res) => {
     // Buat data diploma
     const diplomaData = {
       nama_lengkap: req.body.nama_lengkap,
-      nim: req.body.nim,
+      npm: req.body.npm,
       program_studi: req.body.program_studi,
       gelar_akademik: req.body.gelar_akademik,
       fakultas: req.body.fakultas,
@@ -84,7 +84,7 @@ exports.uploadDiploma = async (req, res) => {
       data: {
         id: diploma.id,
         nama_lengkap: diploma.nama_lengkap,
-        nim: diploma.nim,
+        npm: diploma.npm,
         certificate_id: diploma.certificate_id,
         status: diploma.status,
         created_at: diploma.created_at
@@ -155,17 +155,17 @@ exports.getDiplomaById = async (req, res) => {
   }
 };
 
-// @desc    Get ijazah by NIM
-// @route   GET /api/diplomas/nim/:nim
+// @desc    Get ijazah by NPM
+// @route   GET /api/diplomas/npm/:npm
 // @access  Public
-exports.getDiplomaByNim = async (req, res) => {
+exports.getDiplomaByNpm = async (req, res) => {
   try {
-    const diploma = await Diploma.findOne({ where: { nim: req.params.nim } });
+    const diploma = await Diploma.findOne({ where: { npm: req.params.npm } });
 
     if (!diploma) {
       return res.status(404).json({
         success: false,
-        message: 'Ijazah dengan NIM tersebut tidak ditemukan'
+        message: 'Ijazah dengan NPM tersebut tidak ditemukan'
       });
     }
 
@@ -183,11 +183,11 @@ exports.getDiplomaByNim = async (req, res) => {
 };
 
 // @desc    Verify ijazah (cek keaslian)
-// @route   GET /api/diplomas/verify/:nim
+// @route   GET /api/diplomas/verify/:npm
 // @access  Public
 exports.verifyDiploma = async (req, res) => {
   try {
-    const diploma = await Diploma.findOne({ where: { nim: req.params.nim } });
+    const diploma = await Diploma.findOne({ where: { npm: req.params.npm } });
 
     if (!diploma) {
       return res.json({
@@ -202,7 +202,7 @@ exports.verifyDiploma = async (req, res) => {
       verified: diploma.status === 'minted',
       data: {
         nama_lengkap: diploma.nama_lengkap,
-        nim: diploma.nim,
+        npm: diploma.npm,
         program_studi: diploma.program_studi,
         gelar_akademik: diploma.gelar_akademik,
         tanggal_lulus: diploma.getFormattedDate ? diploma.getFormattedDate() : diploma.tanggal_lulus,
@@ -237,7 +237,7 @@ exports.getPendingDiplomas = async (req, res) => {
       data: diplomas.map(d => ({
         id: d.id,
         nama_lengkap: d.nama_lengkap,
-        nim: d.nim,
+        npm: d.npm,
         program_studi: d.program_studi,
         gelar_akademik: d.gelar_akademik,
         certificate_id: d.certificate_id,

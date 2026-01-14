@@ -7,7 +7,7 @@ import { diplomaAPI } from '@/app/services/api';
 interface FormData {
   // Data Mahasiswa
   nama_lengkap: string;
-  nim: string;
+  npm: string;
   nik: string;
   tempat_tanggal_lahir: string;
   program_studi: string;
@@ -40,7 +40,7 @@ export default function UploadIjazah() {
   // Data kosong sebagai initial state
   const initialEmptyFormData: FormData = {
     nama_lengkap: '',
-    nim: '',
+    npm: '',
     nik: '',
     tempat_tanggal_lahir: '',
     program_studi: '',
@@ -110,6 +110,26 @@ export default function UploadIjazah() {
     }));
   };
 
+  // Fungsi khusus untuk NPM (hanya angka, maks 8 karakter)
+  const handleNPMChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Hanya angka
+    if (value.length <= 8) {
+      setFormData(prev => ({
+        ...prev,
+        npm: value
+      }));
+    }
+  };
+
+  // Fungsi khusus untuk NIK (hanya angka)
+  const handleNIKChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Hanya angka
+    setFormData(prev => ({
+      ...prev,
+      nik: value
+    }));
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -141,7 +161,7 @@ export default function UploadIjazah() {
       // Validasi data wajib
       const requiredFields = [
         'nama_lengkap',
-        'nim',
+        'npm',
         'nik',
         'program_studi',
         'tanggal_lulus',
@@ -165,10 +185,10 @@ export default function UploadIjazah() {
         return;
       }
       
-      // Validasi NIM (contoh: 202210370311001)
-      const nimPattern = /^\d{15}$/;
-      if (!nimPattern.test(formData.nim)) {
-        setError('Format NIM tidak valid! Harus 15 digit angka.');
+      // Validasi NPM (8 digit angka)
+      const npmPattern = /^\d{8}$/;
+      if (!npmPattern.test(formData.npm)) {
+        setError('Format NPM tidak valid! Harus 8 digit angka.');
         setIsSubmitting(false);
         return;
       }
@@ -229,7 +249,7 @@ export default function UploadIjazah() {
       console.log('Mengirim data ke API:', {
         certificate_id: formData.certificate_id,
         nama_lengkap: formData.nama_lengkap,
-        nim: formData.nim,
+        npm: formData.npm,
         program_studi: formData.program_studi
       });
       
@@ -241,16 +261,14 @@ export default function UploadIjazah() {
       // Reset form setelah submit sukses
       resetForm();
       
-      
-      
     } catch (err: any) {
       console.error('Upload error:', err);
       
       // Handle specific error messages
       if (err.response?.data?.error) {
         setError(err.response.data.error);
-        if (err.response.data.error.includes('NIM sudah terdaftar')) {
-          alert('❌ NIM sudah terdaftar dalam sistem!');
+        if (err.response.data.error.includes('NPM sudah terdaftar')) {
+          alert('❌ NPM sudah terdaftar dalam sistem!');
         }
       } else if (err.message.includes('Network Error')) {
         setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
@@ -357,7 +375,7 @@ export default function UploadIjazah() {
   const isFormEmpty = () => {
     return (
       formData.nama_lengkap === '' &&
-      formData.nim === '' &&
+      formData.npm === '' &&
       formData.nik === '' &&
       formData.tempat_tanggal_lahir === '' &&
       formData.program_studi === '' &&
@@ -378,34 +396,38 @@ export default function UploadIjazah() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header dengan badge ADMIN */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-4">
-            <span className="mr-2">👨‍💼</span>
-            MODE ADMIN - Upload Ijazah Digital
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            📤 Upload Ijazah Digital
-          </h1>
-          <p className="text-gray-600">
-            Sebagai admin, Anda dapat mengupload ijazah untuk diverifikasi dan di-mint sebagai Soulbound Token (SBT)
-          </p>
-          
-          {/* Notifikasi untuk admin */}
-          <div className="mt-6 max-w-3xl mx-auto p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start">
-              <div className="mr-3 mt-0.5">
-                <span className="text-blue-600">ℹ️</span>
+        {/* Header dan Admin Info di kiri atas */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div>
+              {/* Admin Badge - Ukuran lebih kecil */}
+              <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mb-3">
+                <span className="mr-1">👨‍💼</span>
+                MODE ADMIN - Upload Ijazah Digital
               </div>
-              <div>
-                <h4 className="font-medium text-blue-800 mb-1">Informasi Upload Admin</h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• <strong>Certificate ID</strong>: {certificateId} (auto-generated)</li>
-                  <li>• Data akan disimpan dengan status <strong>pending</strong></li>
-                  <li>• Pastikan dokumen asli sudah diverifikasi fisiknya</li>
-                  <li>• Mahasiswa dapat memverifikasi dengan NIM mereka</li>
-                  <li>• Setelah verifikasi, data siap di-mint sebagai SBT</li>
-                </ul>
+              
+              <h1 className="text-3xl font-bold text-gray-900">
+                📤 Upload Ijazah Digital
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Upload ijazah untuk diverifikasi dan di-mint sebagai Soulbound Token (SBT)
+              </p>
+            </div>
+            
+            {/* Notifikasi untuk admin - Dipindahkan ke samping kanan */}
+            <div className="md:max-w-xs p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start">
+                <div className="mr-2 mt-0.5">
+                  <span className="text-blue-600 text-sm">ℹ️</span>
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-800 text-sm mb-1">Info Upload</h4>
+                  <ul className="text-xs text-blue-700 space-y-0.5">
+                    <li>• Certificate ID: {certificateId}</li>
+                    <li>• Status awal: <strong>pending</strong></li>
+                    <li>• Verifikasi fisik diperlukan</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -452,23 +474,22 @@ export default function UploadIjazah() {
                   />
                 </div>
 
-                {/* NIM */}
+                {/* NPM */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    NIM (Nomor Induk Mahasiswa) <span className="text-red-500">*</span>
+                    NPM (Nomor Pokok Mahasiswa) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    name="nim"
-                    value={formData.nim}
-                    onChange={handleInputChange}
+                    name="npm"
+                    value={formData.npm}
+                    onChange={handleNPMChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="15 digit NIM (contoh: 202210370311001)"
+                    placeholder="8 digit NPM (angka saja)"
                     required
-                    pattern="\d{15}"
-                    title="Masukkan 15 digit NIM"
+                    maxLength={8}
                   />
-                  <p className="text-xs text-gray-500 mt-1">15 digit angka NIM</p>
+                  <p className="text-xs text-gray-500 mt-1">8 digit angka NPM</p>
                 </div>
 
                 {/* NIK */}
@@ -480,12 +501,11 @@ export default function UploadIjazah() {
                     type="text"
                     name="nik"
                     value={formData.nik}
-                    onChange={handleInputChange}
+                    onChange={handleNIKChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="16 digit NIK"
+                    placeholder="16 digit NIK (angka saja)"
                     required
-                    pattern="\d{16}"
-                    title="Masukkan 16 digit NIK"
+                    maxLength={16}
                   />
                   <p className="text-xs text-gray-500 mt-1">16 digit angka NIK</p>
                 </div>
@@ -946,8 +966,8 @@ export default function UploadIjazah() {
                             <p className="font-medium">{formData.nama_lengkap || '-'}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">NIM</p>
-                            <p className="font-medium font-mono">{formData.nim || '-'}</p>
+                            <p className="text-sm text-gray-500">NPM</p>
+                            <p className="font-medium font-mono">{formData.npm || '-'}</p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">NIK</p>

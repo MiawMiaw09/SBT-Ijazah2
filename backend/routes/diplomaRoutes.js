@@ -22,13 +22,13 @@ router.get('/pending', diplomaController.getPendingDiplomas);
 // @desc    Get ijazah by ID
 router.get('/:id', diplomaController.getDiplomaById);
 
-// @route   GET /api/diplomas/nim/:nim
-// @desc    Get ijazah by NIM
-router.get('/nim/:nim', diplomaController.getDiplomaByNim);
+// @route   GET /api/diplomas/npm/:npm
+// @desc    Get ijazah by NPM
+router.get('/npm/:npm', diplomaController.getDiplomaByNpm);
 
-// @route   GET /api/diplomas/verify/:nim
+// @route   GET /api/diplomas/verify/:npm
 // @desc    Verify keaslian ijazah
-router.get('/verify/:nim', diplomaController.verifyDiploma);
+router.get('/verify/:npm', diplomaController.verifyDiploma);
 
 // @route   PUT /api/diplomas/mint/:id
 // @desc    Mark ijazah sebagai minted (SBT)

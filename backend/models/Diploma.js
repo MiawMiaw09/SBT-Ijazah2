@@ -11,13 +11,13 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     
-    nim: {
+    npm: {
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
       validate: {
         notEmpty: {
-          msg: 'NIM tidak boleh kosong'
+          msg: 'NPM tidak boleh kosong'
         }
       }
     },
@@ -237,9 +237,9 @@ module.exports = (sequelize, DataTypes) => {
       minted: {
         where: { status: 'minted' }
       },
-      byNim: function(nim) {
+      byNim: function(npm) {
         return {
-          where: { nim: nim }
+          where: { npm: npm }
         };
       },
       byWallet: function(walletAddress) {
@@ -262,8 +262,8 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   // Class methods
-  Diploma.findByNim = async function(nim) {
-    return await this.findOne({ where: { nim: nim } });
+  Diploma.findByNim = async function(npm) {
+    return await this.findOne({ where: { npm: npm } });
   };
 
   Diploma.generateCertificateId = function() {

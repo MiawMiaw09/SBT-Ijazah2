@@ -13,10 +13,11 @@ export interface ApiResponse<T = any> {
 export interface Diploma {
   id: number;
   nama_lengkap: string;
-  nim: string;
-  student_email: string;
+  npm: string;
+  nik: string;
   program_studi: string;
   gelar_akademik: string;
+  tempat_tanggal_lahir?: string;
   fakultas?: string;
   tanggal_lulus: string;
   ipk?: number;
@@ -590,8 +591,8 @@ export const generateMockDiplomas = (count: number = 5): Diploma[] => {
     mockDiplomas.push({
       id: i,
       nama_lengkap: `Mahasiswa ${i}`,
-      nim: `202210370311${i.toString().padStart(3, '0')}`,
-      student_email: `mahasiswa${i}@example.com`,
+      npm: `202210370311${i.toString().padStart(3, '0')}`,
+      nik: `202210370311${i.toString().padStart(3, '0')}`,
       program_studi: programs[Math.floor(Math.random() * programs.length)],
       gelar_akademik: 'Sarjana Komputer (S.Kom.)',
       fakultas: 'Fakultas Teknologi Informasi',

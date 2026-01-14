@@ -11,9 +11,11 @@ interface PopupDiplomaData {
   id: number;
   namaMahasiswa: string;
   npm: string;
+  nik: String;
   programStudi: string;
   fakultas?: string;
   gelarAkademik: string;
+  tempattanggallahir: string;
   tanggalKelulusan: string;
   tahunLulus: string;
   walletAddress?: string;
@@ -245,10 +247,12 @@ export default function MintSbtPage() {
     return {
       id: diploma.id,
       namaMahasiswa: diploma.nama_lengkap,
-      npm: diploma.nim,
+      npm: diploma.npm,
+      nik: diploma.nik,
       programStudi: diploma.program_studi,
       fakultas: diploma.fakultas || '',
       gelarAkademik: diploma.gelar_akademik,
+      tempattanggallahir: diploma.tempat_tanggal_lahir,
       tanggalKelulusan: diploma.tanggal_lulus,
       tahunLulus: diploma.tanggal_lulus ? new Date(diploma.tanggal_lulus).getFullYear().toString() : '',
       walletAddress: diploma.wallet_address || '',
@@ -707,7 +711,7 @@ export default function MintSbtPage() {
                     Nama Mahasiswa
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    NIM
+                    NPM
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Program Studi
@@ -770,7 +774,7 @@ export default function MintSbtPage() {
                       
                       {/* NIM */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        {item.nim}
+                        {item.npm}
                       </td>
                       
                       {/* Program Studi */}
@@ -823,7 +827,7 @@ export default function MintSbtPage() {
                         </button>
                         <span className="text-gray-300">|</span>
                         <button
-                          onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.nim)}
+                          onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm)}
                           className="text-red-600 hover:text-red-900 font-medium"
                         >
                           Hapus
@@ -841,7 +845,7 @@ export default function MintSbtPage() {
                       </td>
                     </tr>
                     
-                    {/* Expanded Row (Detail Lengkap) */}
+                    {/* Expanded Row (Detail Lengkap) - DIUBAH: HAPUS EMAIL, TAMBAH TEMPAT/TGL LAHIR */}
                     {expandedRow === item.id && (
                       <tr className="bg-gray-50">
                         <td colSpan={10} className="px-6 py-4">
@@ -856,12 +860,12 @@ export default function MintSbtPage() {
                                     <p className="font-medium">{item.nama_lengkap}</p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500">NIM</p>
-                                    <p className="font-medium font-mono">{item.nim}</p>
+                                    <p className="text-gray-500">NPM</p>
+                                    <p className="font-medium font-mono">{item.npm}</p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500">Email</p>
-                                    <p className="font-medium">{item.student_email || '-'}</p>
+                                    <p className="text-gray-500">NIK</p>
+                                    <p className="font-medium font-mono">{item.nik}</p>
                                   </div>
                                   <div>
                                     <p className="text-gray-500">Program Studi</p>
@@ -874,6 +878,10 @@ export default function MintSbtPage() {
                                   <div>
                                     <p className="text-gray-500">Gelar Akademik</p>
                                     <p className="font-medium">{item.gelar_akademik}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500">TempatTanggalLahir</p>
+                                    <p className="font-medium">{item.tempat_tanggal_lahir}</p>
                                   </div>
                                 </div>
                               </div>
@@ -977,7 +985,7 @@ export default function MintSbtPage() {
                                   }
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.nim)}
+                                  onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm)}
                                   className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700 transition"
                                 >
                                   Hapus Data

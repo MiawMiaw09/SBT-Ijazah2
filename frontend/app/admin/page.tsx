@@ -6,7 +6,7 @@ interface IjazahData {
   id: number;
   status: 'pending' | 'verified' | 'minted' | 'rejected';
   nama_lengkap: string;
-  nim: string;
+  npm: string;
   program_studi: string;
   certificate_id: string;
   created_at: string;
@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   const [ijazahData, setIjazahData] = useState<IjazahData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Fungsi untuk mengambil data dari database - DIUBAH CARA PENGAMBILANNYA
+  // Fungsi untuk mengambil data dari database
   const fetchDashboardData = async () => {
     setIsLoading(true);
     setError(null);
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
     try {
       console.log('📊 Fetching dashboard data from API...');
       
-      // 1. Ambil data statistik dashboard dari API baru - SAMA DENGAN HOMEPAGE
+      // 1. Ambil data statistik dashboard dari API baru
       const statsResponse = await fetch('http://localhost:5000/api/diplomas/stats/dashboard', {
         method: 'GET',
         headers: {
@@ -74,12 +74,12 @@ export default function AdminDashboard() {
           pendingPercentage: apiStats.pendingPercentage || 0
         });
       } else {
-        // Fallback: hitung manual dari data ijazah - SAMA DENGAN HOMEPAGE
+        // Fallback: hitung manual dari data ijazah
         console.warn('⚠️ Using fallback calculation for stats');
         await fetchAndCalculateStats();
       }
       
-      // 2. Ambil data ijazah terbaru untuk aktivitas - DIUBAH CARA PENGAMBILANNYA
+      // 2. Ambil data ijazah terbaru untuk aktivitas
       const ijazahResponse = await fetch('http://localhost:5000/api/diplomas', {
         method: 'GET',
         headers: {
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
             id: item.id,
             status: item.status,
             nama_lengkap: item.nama_lengkap,
-            nim: item.nim,
+            npm: item.npm,
             program_studi: item.program_studi,
             certificate_id: item.certificate_id,
             created_at: item.created_at,
@@ -127,14 +127,14 @@ export default function AdminDashboard() {
       console.error('❌ Error fetching dashboard data:', error);
       setError('Gagal mengambil data dari server. Pastikan backend berjalan.');
       
-      // Fallback data untuk development - SAMA DENGAN HOMEPAGE
+      // Fallback data untuk development
       setFallbackData();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fallback function untuk menghitung statistik dari data ijazah - DIUBAH
+  // Fallback function untuk menghitung statistik dari data ijazah
   const fetchAndCalculateStats = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/diplomas', {
@@ -172,13 +172,13 @@ export default function AdminDashboard() {
     }
   };
 
-  // Fallback data untuk development jika API tidak tersedia - TETAP SAMA
+  // Fallback data untuk development jika API tidak tersedia
   const setFallbackData = () => {
     const mockData: IjazahData[] = [
-      { id: 1, status: 'minted', nama_lengkap: 'John Doe', nim: '202210001', program_studi: 'Informatika', certificate_id: 'CERT-2024-0001', created_at: '2024-01-15T10:30:00Z' },
-      { id: 2, status: 'pending', nama_lengkap: 'Jane Smith', nim: '202210002', program_studi: 'Sistem Informasi', certificate_id: 'CERT-2024-0002', created_at: '2024-01-16T14:20:00Z' },
-      { id: 3, status: 'minted', nama_lengkap: 'Bob Johnson', nim: '202210003', program_studi: 'Teknik Elektro', certificate_id: 'CERT-2024-0003', created_at: '2024-01-17T09:15:00Z' },
-      { id: 4, status: 'minted', nama_lengkap: 'Alice Brown', nim: '202210004', program_studi: 'Manajemen', certificate_id: 'CERT-2024-0004', created_at: '2024-01-18T11:45:00Z' },
+      { id: 1, status: 'minted', nama_lengkap: 'John Doe', npm: '202210001', program_studi: 'Informatika', certificate_id: 'CERT-2024-0001', created_at: '2024-01-15T10:30:00Z' },
+      { id: 2, status: 'pending', nama_lengkap: 'Jane Smith', npm: '202210002', program_studi: 'Sistem Informasi', certificate_id: 'CERT-2024-0002', created_at: '2024-01-16T14:20:00Z' },
+      { id: 3, status: 'minted', nama_lengkap: 'Bob Johnson', npm: '202210003', program_studi: 'Teknik Elektro', certificate_id: 'CERT-2024-0003', created_at: '2024-01-17T09:15:00Z' },
+      { id: 4, status: 'minted', nama_lengkap: 'Alice Brown', npm: '202210004', program_studi: 'Manajemen', certificate_id: 'CERT-2024-0004', created_at: '2024-01-18T11:45:00Z' },
     ];
     
     const total = mockData.length;
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fungsi untuk pie chart menggunakan conic-gradient - TETAP SAMA
+  // Fungsi untuk pie chart menggunakan conic-gradient
   const getConicGradient = () => {
     if (stats.mintedPercentage === 0 && stats.pendingPercentage === 0) {
       return "conic-gradient(#e5e7eb 0% 100%)";
@@ -219,7 +219,7 @@ export default function AdminDashboard() {
     )`;
   };
 
-  // Format tanggal untuk aktivitas - TETAP SAMA
+  // Format tanggal untuk aktivitas
   const formatActivityDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Format status untuk display - TETAP SAMA
+  // Format status untuk display
   const formatStatus = (status: string) => {
     const statusMap: Record<string, string> = {
       'pending': 'Pending',
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
     return statusMap[status] || status;
   };
 
-  // Get status color - TETAP SAMA
+  // Get status color
   const getStatusColor = (status: string) => {
     const colorMap: Record<string, { bg: string, text: string, dot: string }> = {
       'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
@@ -258,24 +258,24 @@ export default function AdminDashboard() {
     return colorMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-500' };
   };
 
-  // SEMUA KODE JSX DI BAWAH INI TETAP SAMA PERSIS
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-gray-600 mt-2">Sistem Manajemen Ijazah Digital</p>
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      {/* Header yang lebih kecil dan di kiri */}
+      <div className="mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-sm text-gray-600 mt-1">Sistem Manajemen Ijazah Digital</p>
           </div>
           <div className="flex items-center space-x-3">
             <button
               onClick={fetchDashboardData}
               disabled={isLoading}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {isLoading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -285,7 +285,7 @@ export default function AdminDashboard() {
             </button>
             {lastUpdated && (
               <div className="text-xs text-gray-500">
-                Terakhir update: {lastUpdated}
+                Update: {lastUpdated}
               </div>
             )}
           </div>
@@ -294,9 +294,9 @@ export default function AdminDashboard() {
       
       {/* Error Message */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           <div className="flex items-center">
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
             <span>{error}</span>
@@ -305,21 +305,21 @@ export default function AdminDashboard() {
       )}
       
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Total Ijazah */}
-        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Total Ijazah</h3>
-              <p className="text-3xl font-bold text-gray-800 mt-2">
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Ijazah</h3>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
                 {isLoading ? '...' : stats.total}
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 Total dokumen yang diupload
               </p>
             </div>
-            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
@@ -327,17 +327,17 @@ export default function AdminDashboard() {
         </div>
         
         {/* Sudah Minted */}
-        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Sudah Minted</h3>
-              <p className="text-3xl font-bold text-green-600 mt-2">
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Sudah Minted</h3>
+              <p className="text-2xl font-bold text-green-600 mt-1">
                 {isLoading ? '...' : stats.minted}
               </p>
               <div className="flex items-center mt-1">
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
                   <div 
-                    className="bg-green-500 h-2 rounded-full" 
+                    className="bg-green-500 h-1.5 rounded-full" 
                     style={{ width: `${stats.mintedPercentage}%` }}
                   ></div>
                 </div>
@@ -346,8 +346,8 @@ export default function AdminDashboard() {
                 </span>
               </div>
             </div>
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
@@ -355,17 +355,17 @@ export default function AdminDashboard() {
         </div>
         
         {/* Belum Minted */}
-        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-red-500 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Belum Minted</h3>
-              <p className="text-3xl font-bold text-red-600 mt-2">
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Belum Minted</h3>
+              <p className="text-2xl font-bold text-red-600 mt-1">
                 {isLoading ? '...' : stats.pending}
               </p>
               <div className="flex items-center mt-1">
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
                   <div 
-                    className="bg-red-500 h-2 rounded-full" 
+                    className="bg-red-500 h-1.5 rounded-full" 
                     style={{ width: `${stats.pendingPercentage}%` }}
                   ></div>
                 </div>
@@ -374,8 +374,8 @@ export default function AdminDashboard() {
                 </span>
               </div>
             </div>
-            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
-              <svg className="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -384,9 +384,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Distribution Chart */}
-      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-gray-800">Distribusi Ijazah</h3>
+      <div className="bg-white rounded-lg shadow-sm p-5 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-md font-semibold text-gray-800">Distribusi Ijazah</h3>
           <div className="text-sm text-gray-500">
             {stats.total > 0 ? (
               <>
@@ -400,28 +400,26 @@ export default function AdminDashboard() {
         
         <div className="flex flex-col md:flex-row items-center">
           {/* Pie Chart */}
-          <div className="w-56 h-56 mb-6 md:mb-0 md:mr-10 relative">
+          <div className="w-48 h-48 mb-6 md:mb-0 md:mr-8 relative">
             {isLoading ? (
               <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
               </div>
             ) : stats.total === 0 ? (
               <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-gray-400">No Data</span>
+                <span className="text-gray-400 text-sm">No Data</span>
               </div>
             ) : (
               <>
-                {/* Versi menggunakan conic-gradient */}
                 <div 
                   className="w-full h-full rounded-full"
                   style={{
                     background: getConicGradient(),
                   }}
                 >
-                  {/* Overlay untuk bagian tengah */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white rounded-full flex items-center justify-center">
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-white rounded-full flex items-center justify-center">
                     <div className="text-center">
-                      <span className="text-2xl font-bold text-gray-700">
+                      <span className="text-xl font-bold text-gray-700">
                         {stats.total}
                       </span>
                       <div className="text-xs text-gray-500">Total</div>
@@ -435,46 +433,46 @@ export default function AdminDashboard() {
           {/* Legend & Details */}
           <div className="flex-1">
             {isLoading ? (
-              <div className="space-y-4">
-                <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="space-y-3">
+                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Status Detail</h4>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Status Detail</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-2.5 bg-green-50 rounded-lg">
                       <div className="flex items-center">
-                        <div className="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                        <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
                         <div>
-                          <span className="text-gray-700 font-medium">Sudah Minted</span>
+                          <span className="text-gray-700 font-medium text-sm">Sudah Minted</span>
                           <p className="text-xs text-gray-500">SBT sudah diterbitkan</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-xl font-bold text-green-600">
+                        <span className="text-lg font-bold text-green-600">
                           {stats.minted}
                         </span>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs text-gray-500">
                           {stats.mintedPercentage}%
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                    <div className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg">
                       <div className="flex items-center">
-                        <div className="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
                         <div>
-                          <span className="text-gray-700 font-medium">Belum Minted</span>
+                          <span className="text-gray-700 font-medium text-sm">Belum Minted</span>
                           <p className="text-xs text-gray-500">Menunggu proses mint</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-xl font-bold text-red-600">
+                        <span className="text-lg font-bold text-red-600">
                           {stats.pending}
                         </span>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs text-gray-500">
                           {stats.pendingPercentage}%
                         </div>
                       </div>
@@ -483,17 +481,17 @@ export default function AdminDashboard() {
                 </div>
                 
                 {/* Quick Stats */}
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Statistik Cepat</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-lg font-bold text-blue-600">
+                <div className="pt-3 border-t border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Statistik Cepat</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-center p-2 bg-blue-50 rounded-lg">
+                      <div className="text-md font-bold text-blue-600">
                         {stats.total}
                       </div>
                       <div className="text-xs text-gray-600">Total Dokumen</div>
                     </div>
-                    <div className="text-center p-3 bg-purple-50 rounded-lg">
-                      <div className="text-lg font-bold text-purple-600">
+                    <div className="text-center p-2 bg-purple-50 rounded-lg">
+                      <div className="text-md font-bold text-purple-600">
                         {stats.minted}
                       </div>
                       <div className="text-xs text-gray-600">SBT Aktif</div>
@@ -507,14 +505,14 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Aktivitas Terbaru</h3>
+      <div className="bg-white rounded-lg shadow-sm p-5">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-md font-semibold text-gray-800">Aktivitas Terbaru</h3>
           <button 
             onClick={fetchDashboardData}
-            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+            className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
           >
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             Refresh
@@ -522,43 +520,43 @@ export default function AdminDashboard() {
         </div>
         
         {isLoading ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
+              <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
             ))}
           </div>
         ) : ijazahData.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-gray-400 text-4xl mb-4">📄</div>
-            <p className="text-gray-500">Belum ada aktivitas ijazah</p>
-            <p className="text-sm text-gray-400 mt-1">Upload ijazah pertama Anda</p>
+          <div className="text-center py-6">
+            <div className="text-gray-400 text-3xl mb-3">📄</div>
+            <p className="text-gray-500 text-sm">Belum ada aktivitas ijazah</p>
+            <p className="text-xs text-gray-400 mt-1">Upload ijazah pertama Anda</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {ijazahData.slice(0, 5).map((item) => {
               const statusColor = getStatusColor(item.status);
               
               return (
                 <div 
                   key={item.id}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition"
+                  className="flex items-center justify-between p-2.5 hover:bg-gray-50 rounded transition"
                 >
                   <div className="flex items-center">
-                    <div className={`w-2 h-2 rounded-full mr-3 ${statusColor.dot}`}></div>
+                    <div className={`w-1.5 h-1.5 rounded-full mr-2 ${statusColor.dot}`}></div>
                     <div>
-                      <p className="font-medium text-gray-800">
-                        {item.nama_lengkap} ({item.nim})
+                      <p className="font-medium text-gray-800 text-sm">
+                        {item.nama_lengkap} ({item.npm})
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xs text-gray-500">
                         {item.program_studi} • {formatActivityDate(item.created_at)}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className={`text-xs px-2 py-1 rounded ${statusColor.bg} ${statusColor.text}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded ${statusColor.bg} ${statusColor.text}`}>
                       {formatStatus(item.status)}
                     </span>
-                    <span className="text-xs text-gray-500 mt-1">
+                    <span className="text-xs text-gray-500 mt-0.5">
                       ID: {item.certificate_id}
                     </span>
                   </div>
@@ -567,8 +565,8 @@ export default function AdminDashboard() {
             })}
             
             {ijazahData.length > 5 && (
-              <div className="text-center pt-3">
-                <button className="text-sm text-blue-600 hover:text-blue-800">
+              <div className="text-center pt-2">
+                <button className="text-xs text-blue-600 hover:text-blue-800">
                   Lihat {ijazahData.length - 5} aktivitas lainnya →
                 </button>
               </div>

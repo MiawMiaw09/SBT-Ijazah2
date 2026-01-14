@@ -15,11 +15,11 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    // Format: ijazah-nim-timestamp.ext
-    const nim = req.body.nim || 'unknown';
+    // Format: ijazah-npm-timestamp.ext
+    const npm = req.body.npm || 'unknown';
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
-    const filename = `ijazah-${nim}-${timestamp}${ext}`;
+    const filename = `ijazah-${npm}-${timestamp}${ext}`;
     cb(null, filename);
   }
 });

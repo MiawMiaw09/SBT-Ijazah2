@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 interface ExtendedDiploma {
   id: number;
   nama_lengkap: string;
-  nim: string;
+  npm: string;
   program_studi: string;
   gelar_akademik: string;
   fakultas?: string;
@@ -137,7 +137,7 @@ export default function DataIjazahPage() {
         const formattedData: ExtendedDiploma[] = dataArray.map((item: any) => ({
           id: item.id || item.ID || 0,
           nama_lengkap: item.nama_lengkap || item.nama || '',
-          nim: item.nim || '',
+          npm: item.npm || '',
           program_studi: item.program_studi || '',
           gelar_akademik: item.gelar_akademik || '',
           fakultas: item.fakultas || '',
@@ -186,7 +186,7 @@ export default function DataIjazahPage() {
   const filteredDiplomas = diplomas.filter((diploma) => {
     const matchesSearch = 
       diploma.nama_lengkap.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      diploma.nim.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      diploma.npm.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (diploma.certificate_id && diploma.certificate_id.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || diploma.status === statusFilter;
@@ -277,7 +277,7 @@ export default function DataIjazahPage() {
     return {
       id: diploma.id,
       namaMahasiswa: diploma.nama_lengkap,
-      npm: diploma.nim,
+      npm: diploma.npm,
       nik: diploma.nik || '',
       tempatTanggalLahir: diploma.tempat_tanggal_lahir || '',
       programStudi: diploma.program_studi,
@@ -662,7 +662,7 @@ export default function DataIjazahPage() {
                     Nama
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    NIM
+                    NPM
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Program Studi
@@ -745,7 +745,7 @@ export default function DataIjazahPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {diploma.nim}
+                          {diploma.npm}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {diploma.program_studi}
@@ -808,7 +808,7 @@ export default function DataIjazahPage() {
                                     </div>
                                     <div>
                                       <p className="text-gray-500">NIM</p>
-                                      <p className="font-medium font-mono">{diploma.nim}</p>
+                                      <p className="font-medium font-mono">{diploma.npm}</p>
                                     </div>
                                     <div>
                                       <p className="text-gray-500">NIK</p>
