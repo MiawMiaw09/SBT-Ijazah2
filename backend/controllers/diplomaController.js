@@ -67,6 +67,8 @@ exports.uploadDiploma = async (req, res) => {
       judul_skripsi: req.body.judul_skripsi,
       tahun_akademik: req.body.tahun_akademik,
       yudisium: req.body.yudisium,
+      nomor_sk_rektor: req.body.nomor_sk_rektor || null,
+      tanggal_sk_rektor: req.body.tanggal_sk_rektor || null,
       wallet_address: req.body.wallet_address,
       nama_file: req.file.originalname,
       path_file: req.file.path,

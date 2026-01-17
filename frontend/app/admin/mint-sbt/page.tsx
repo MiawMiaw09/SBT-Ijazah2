@@ -227,7 +227,7 @@ export default function MintSbtPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Format date untuk display
+  // Format date untuk display - SAMA SEPERTI DI DATA IJAZAH
   const formatDateDisplay = (dateString: string) => {
     if (!dateString) return '-';
     try {
@@ -239,6 +239,28 @@ export default function MintSbtPage() {
       });
     } catch {
       return dateString;
+    }
+  };
+
+  // Get status color - SAMA SEPERTI DI DATA IJAZAH
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'verified': return 'bg-blue-100 text-blue-800';
+      case 'minted': return 'bg-green-100 text-green-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Get status label - SAMA SEPERTI DI DATA IJAZAH
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'verified': return 'Verified';
+      case 'minted': return 'Minted';
+      case 'rejected': return 'Rejected';
+      default: return status;
     }
   };
 
@@ -845,15 +867,15 @@ export default function MintSbtPage() {
                       </td>
                     </tr>
                     
-                    {/* Expanded Row (Detail Lengkap) - DIUBAH: HAPUS EMAIL, TAMBAH TEMPAT/TGL LAHIR */}
+                    {/* Expanded Row (Detail Lengkap) - PERUBAHAN: HAPUS TOKEN ID, TAMBAH TOMBOL MINT IJAZAH */}
                     {expandedRow === item.id && (
                       <tr className="bg-gray-50">
                         <td colSpan={10} className="px-6 py-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-lg border">
-                            {/* Kolom Kiri */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 bg-white rounded-lg border">
+                            {/* Kolom Kiri - SAMA SEPERTI DI DATA IJAZAH */}
                             <div className="space-y-4">
                               <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Mahasiswa</h4>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Mahasiswa Lengkap</h4>
                                 <div className="grid grid-cols-2 gap-3 text-sm">
                                   <div>
                                     <p className="text-gray-500">Nama Lengkap</p>
@@ -865,7 +887,11 @@ export default function MintSbtPage() {
                                   </div>
                                   <div>
                                     <p className="text-gray-500">NIK</p>
-                                    <p className="font-medium font-mono">{item.nik}</p>
+                                    <p className="font-medium font-mono">{item.nik || '-'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500">Tempat/Tgl Lahir</p>
+                                    <p className="font-medium">{item.tempat_tanggal_lahir || '-'}</p>
                                   </div>
                                   <div>
                                     <p className="text-gray-500">Program Studi</p>
@@ -880,8 +906,8 @@ export default function MintSbtPage() {
                                     <p className="font-medium">{item.gelar_akademik}</p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500">TempatTanggalLahir</p>
-                                    <p className="font-medium">{item.tempat_tanggal_lahir}</p>
+                                    <p className="text-gray-500">IPK</p>
+                                    <p className="font-medium">{item.ipk || '-'}</p>
                                   </div>
                                 </div>
                               </div>
@@ -896,10 +922,6 @@ export default function MintSbtPage() {
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500">IPK</p>
-                                    <p className="font-medium">{item.ipk || '-'}</p>
-                                  </div>
-                                  <div>
                                     <p className="text-gray-500">Tahun Akademik</p>
                                     <p className="font-medium">{item.tahun_akademik || '-'}</p>
                                   </div>
@@ -907,18 +929,29 @@ export default function MintSbtPage() {
                                     <p className="text-gray-500">Yudisium</p>
                                     <p className="font-medium">{item.yudisium || '-'}</p>
                                   </div>
-                                  <div className="col-span-2">
+                                  <div>
                                     <p className="text-gray-500">Judul Skripsi</p>
                                     <p className="font-medium">{item.judul_skripsi || '-'}</p>
+                                  </div>
+                                  {/* TAMBAHKAN NOMOR SK REKTOR DAN TANGGAL SK REKTOR */}
+                                  <div>
+                                    <p className="text-gray-500">Nomor SK Rektor</p>
+                                    <p className="font-medium">{item.nomor_sk_rektor || '-'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500">Tanggal SK Rektor</p>
+                                    <p className="font-medium">
+                                      {item.tanggal_sk_rektor ? formatDateDisplay(item.tanggal_sk_rektor) : '-'}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
                             </div>
                             
-                            {/* Kolom Kanan */}
+                            {/* Kolom Kanan - PERUBAHAN: HAPUS TOKEN ID, TAMBAH TOMBOL MINT IJAZAH */}
                             <div className="space-y-4">
                               <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Sistem & Blockchain</h4>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Blockchain & Sistem</h4>
                                 <div className="space-y-3">
                                   <div>
                                     <p className="text-gray-500 text-sm">Certificate ID</p>
@@ -926,16 +959,17 @@ export default function MintSbtPage() {
                                       {item.certificate_id}
                                     </p>
                                   </div>
+                                  {/* DIHAPUS: Token ID */}
                                   <div>
-                                    <p className="text-gray-500 text-sm">Token ID</p>
-                                    <p className="font-medium font-mono text-sm bg-gray-100 p-2 rounded">
-                                      {item.token_id || 'Belum di-mint'}
+                                    <p className="text-gray-500 text-sm">Wallet Address</p>
+                                    <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
+                                      {item.wallet_address || '-'}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500 text-sm">Wallet Address</p>
-                                    <p className="font-medium font-mono text-sm break-all bg-gray-100 p-2 rounded">
-                                      {item.wallet_address || '-'}
+                                    <p className="text-gray-500 text-sm">IPFS Hash</p>
+                                    <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
+                                      {item.file_hash || '-'}
                                     </p>
                                   </div>
                                   <div>
@@ -951,45 +985,44 @@ export default function MintSbtPage() {
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-gray-500 text-sm">IPFS Hash</p>
-                                    <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
-                                      {item.file_hash || '-'}
-                                    </p>
-                                  </div>
-                                  <div>
                                     <p className="text-gray-500 text-sm">Status</p>
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      item.status === "minted" 
-                                        ? 'bg-purple-100 text-purple-800'
-                                        : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                      {item.status.toUpperCase()}
-                                    </span>
+                                    <div className="flex items-center space-x-2">
+                                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}`}>
+                                        {getStatusLabel(item.status)}
+                                      </span>
+                                      {item.status === 'verified' ? (
+                                        <button
+                                          onClick={() => handleStartMintSingle(item)}
+                                          className="text-sm text-green-600 hover:text-green-800 font-medium"
+                                        >
+                                          Mint SBT
+                                        </button>
+                                      ) : item.status === 'minted' ? (
+                                        <span className="text-sm text-gray-500">
+                                          (Immutable - tidak dapat diubah)
+                                        </span>
+                                      ) : null}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                               
-                              <div className="pt-4 border-t flex space-x-2">
-                                <button
-                                  onClick={() => handleStartMintSingle(item)}
-                                  disabled={item.status === "minted"}
-                                  className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition ${
-                                    item.status === "minted"
-                                      ? 'bg-purple-200 text-purple-500 cursor-not-allowed'
-                                      : 'bg-green-600 text-white hover:bg-green-700'
-                                  }`}
-                                >
-                                  {item.status === "minted" 
-                                    ? "✓ Sudah Di-Mint" 
-                                    : "Mint Sekarang"
-                                  }
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm)}
-                                  className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700 transition"
-                                >
-                                  Hapus Data
-                                </button>
+                              <div className="pt-4 border-t">
+                                <div className="flex space-x-3">
+                                  {/* TAMBAHKAN TOMBOL MINT IJAZAH DI SINI */}
+                                  <button
+                                    onClick={() => handleStartMintSingle(item)}
+                                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-medium text-sm"
+                                  >
+                                    Mint Ijazah
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm)}
+                                    className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
+                                  >
+                                    Hapus Data
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>

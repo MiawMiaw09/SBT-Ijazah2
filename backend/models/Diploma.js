@@ -107,7 +107,22 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(50),
       allowNull: true
     },
-    
+     nomor_sk_rektor: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    defaultValue: null
+  },
+  
+  tanggal_sk_rektor: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    defaultValue: null,
+    validate: {
+      isDate: {
+        msg: 'Format tanggal SK Rektor tidak valid'
+      }
+    }
+  },
     // Data Blockchain
     wallet_address: {
       type: DataTypes.STRING(42),

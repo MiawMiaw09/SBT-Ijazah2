@@ -42,7 +42,6 @@ interface ExtendedDiploma {
   tempat_tanggal_lahir?: string;
   nomor_sk_rektor?: string;
   tanggal_sk_rektor?: string;
-  student_email?: string;
 }
 
 // Interface untuk IjazahData yang diharapkan MintPopup
@@ -55,6 +54,7 @@ interface PopupDiplomaData {
   programStudi: string;
   fakultas: string;
   gelarAkademik: string;
+  tempattanggalLahir: string;
   tanggalKelulusan: string;
   tahunLulus: string;
   nomorSKRektor: string;
@@ -63,7 +63,7 @@ interface PopupDiplomaData {
   ipfs: string;
   alamatPenerbit: string;
   tokenID: string;
-  certificateId: string; // Added certificateId property
+  certificateId: string;
   status: 'Pending' | 'Minted';
   selected: boolean;
 }
@@ -113,6 +113,13 @@ export default function DataIjazahPage() {
         const result = await response.json();
         console.log('📊 [3] API Data received:', result);
         
+        // Debug: Tampilkan struktur data pertama untuk memastikan field ada
+        if (result.data && result.data.length > 0) {
+          console.log('🔍 [3.1] First item structure:', Object.keys(result.data[0]));
+          console.log('🔍 [3.2] Has nomor_sk_rektor?', result.data[0]?.nomor_sk_rektor);
+          console.log('🔍 [3.3] Has tanggal_sk_rektor?', result.data[0]?.tanggal_sk_rektor);
+        }
+        
         // Handle various response formats
         let dataArray: any[] = [];
         
@@ -133,13 +140,15 @@ export default function DataIjazahPage() {
           return;
         }
         
-        // Format data sesuai interface
+        // Format data sesuai interface - PERBAIKAN UTAMA DI SINI!
         const formattedData: ExtendedDiploma[] = dataArray.map((item: any) => ({
           id: item.id || item.ID || 0,
           nama_lengkap: item.nama_lengkap || item.nama || '',
           npm: item.npm || '',
+          nik: item.nik || '',
           program_studi: item.program_studi || '',
           gelar_akademik: item.gelar_akademik || '',
+          tempat_tanggal_lahir: item.tempat_tanggal_lahir || '',
           fakultas: item.fakultas || '',
           tanggal_lulus: item.tanggal_lulus || '',
           ipk: item.ipk || 0,
@@ -164,8 +173,20 @@ export default function DataIjazahPage() {
           minted_at: item.minted_at || '',
           uploaded_by: item.uploaded_by || '',
           verified_by: item.verified_by || '',
-          minted_by: item.minted_by || ''
+          minted_by: item.minted_by || '',
+          // TAMBAHKAN FIELD INI YANG TADINYA HILANG
+          nomor_sk_rektor: item.nomor_sk_rektor || '',
+          tanggal_sk_rektor: item.tanggal_sk_rektor || '',
         }));
+        
+        // Debug: Cek apakah field sudah dimapping dengan benar
+        if (formattedData.length > 0) {
+          console.log('✅ [4] First formatted item:', {
+            nama: formattedData[0].nama_lengkap,
+            nomor_sk_rektor: formattedData[0].nomor_sk_rektor,
+            tanggal_sk_rektor: formattedData[0].tanggal_sk_rektor
+          });
+        }
         
         setDiplomas(formattedData);
       } catch (error) {
@@ -283,6 +304,7 @@ export default function DataIjazahPage() {
       programStudi: diploma.program_studi,
       fakultas: diploma.fakultas || '',
       gelarAkademik: diploma.gelar_akademik,
+      tempattanggalLahir: diploma.tempat_tanggal_lahir || '',
       tanggalKelulusan: diploma.tanggal_lulus,
       tahunLulus: diploma.tanggal_lulus ? new Date(diploma.tanggal_lulus).getFullYear().toString() : '',
       nomorSKRektor: diploma.nomor_sk_rektor || '',
@@ -291,7 +313,7 @@ export default function DataIjazahPage() {
       ipfs: diploma.file_hash || '',
       alamatPenerbit: diploma.contract_address || '0x1234567890abcdef1234567890abcdef12345678',
       tokenID: diploma.token_id || diploma.certificate_id || `UWD-${new Date().getFullYear()}-${diploma.id}`,
-      certificateId: diploma.certificate_id || '', // Added certificateId property
+      certificateId: diploma.certificate_id || '',
       status: diploma.status === 'minted' ? 'Minted' : 'Pending',
       selected: false
     };
@@ -496,8 +518,9 @@ export default function DataIjazahPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      {/* Konten Utama */}
+      <div className="container mx-auto px-4 py-6">
         {/* Popup Mint Flow */}
         {mintStep !== 'idle' && currentMintingItem && (
           <MintPopup
@@ -510,66 +533,59 @@ export default function DataIjazahPage() {
           />
         )}
 
-        {/* Header */}
+        {/* Bagian Data Ijazah */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">📋 Data Ijazah</h1>
-          <p className="text-gray-600 mt-2">Kelola semua data ijazah yang terdaftar dalam sistem</p>
-          <div className="mt-2 text-sm text-gray-500">
-            Sumber data: <code className="bg-gray-100 px-2 py-1 rounded">{API_BASE_URL}/api/diplomas</code>
-            {diplomas.length > 0 && (
-              <span className="ml-2 text-green-600">({diplomas.length} data ditemukan)</span>
-            )}
-          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">Data Ijazah</h3>
+          <p className="text-gray-600">Kelola semua data ijazah yang terdaftar dalam sistem</p>
+          {diplomas.length > 0 && (
+            <div className="mt-1 text-sm text-gray-500">
+              <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded">
+                ✓ {diplomas.length} data ditemukan
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600">Total Ijazah</p>
+        {/* Statistik - DISESUAIKAN DENGAN GAMBAR */}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Total Ijazah</p>
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600">Pending</p>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Pending</p>
             <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600">Verified</p>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Verified</p>
             <p className="text-2xl font-bold text-blue-600">{stats.verified}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600">Minted</p>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Minted</p>
             <p className="text-2xl font-bold text-green-600">{stats.minted}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600">Rejected</p>
-            <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* Filter Section - DISESUAIKAN DENGAN GAMBAR */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cari (Nama/NIM/Certificate ID)
-              </label>
+              <p className="text-sm font-medium text-gray-700 mb-1">Cari (Nama/NIM/Certificate ID)</p>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Cari..."
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Program Studi
-              </label>
+              <p className="text-sm font-medium text-gray-700 mb-1">Program Studi</p>
               <select
                 value={programStudiFilter}
                 onChange={(e) => setProgramStudiFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">Semua Program Studi</option>
                 {programStudiOptions.map((prodi) => (
@@ -579,13 +595,11 @@ export default function DataIjazahPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tahun Lulus
-              </label>
+              <p className="text-sm font-medium text-gray-700 mb-1">Tahun Lulus</p>
               <select
                 value={tahunFilter}
                 onChange={(e) => setTahunFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">Semua Tahun</option>
                 {tahunOptions.map((tahun) => (
@@ -595,13 +609,11 @@ export default function DataIjazahPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
+              <p className="text-sm font-medium text-gray-700 mb-1">Status</p>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">Semua Status</option>
                 <option value="pending">Pending</option>
@@ -614,31 +626,32 @@ export default function DataIjazahPage() {
             <div className="flex items-end">
               <button
                 onClick={fetchDiplomas}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-medium flex items-center justify-center"
               >
-                🔄 Refresh Data
+                <span className="mr-2">🔄</span>
+                Refresh Data
               </button>
             </div>
           </div>
           
-          {/* Debug Info */}
-          <div className="mt-4 text-xs text-gray-500">
+          {/* Debug Tools */}
+          <div className="mt-4 pt-3 border-t border-gray-200">
             <div className="flex space-x-4">
               <button 
                 onClick={() => window.open(`${API_BASE_URL}/api/diplomas`, '_blank')}
-                className="text-blue-600 hover:text-blue-800"
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
               >
                 Test API Endpoint
               </button>
               <button 
                 onClick={() => console.log('Current diplomas:', diplomas)}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-sm text-gray-600 hover:text-gray-800 hover:underline"
               >
                 Log Data State
               </button>
               <button 
                 onClick={fetchDiplomas}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-sm text-gray-600 hover:text-gray-800 hover:underline"
               >
                 Force Refresh
               </button>
@@ -647,34 +660,34 @@ export default function DataIjazahPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    No
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    NO
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Certificate ID
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CERTIFICATE ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nama
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    NAMA
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NPM
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Program Studi
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PROGRAM STUDI
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    STATUS
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Detail
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    DETAIL
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aksi
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    AKSI
                   </th>
                 </tr>
               </thead>
@@ -728,56 +741,53 @@ export default function DataIjazahPage() {
                   filteredDiplomas.map((diploma, index) => (
                     <>
                       <tr key={diploma.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
                           {index + 1}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
                             {diploma.certificate_id}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {diploma.nama_lengkap}
                           </div>
-                          {diploma.nik && (
-                            <div className="text-xs text-gray-500">NIK: {diploma.nik}</div>
-                          )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {diploma.npm}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {diploma.program_studi}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(diploma.status)}`}>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(diploma.status)}`}>
                             {getStatusLabel(diploma.status)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
                           <button
                             onClick={() => toggleExpandRow(diploma.id)}
-                            className="text-blue-600 hover:text-blue-900 font-medium"
+                            className="text-blue-600 hover:text-blue-800 font-medium underline"
                           >
-                            {expandedRow === diploma.id ? "Sembunyikan" : "Lihat Detail"}
+                            {expandedRow === diploma.id ? "Sembunyikan Detail" : "Lihat Detail"}
                           </button>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
                           <div className="flex flex-wrap gap-2">
                             {diploma.status === 'verified' && (
                               <button
                                 onClick={() => handleStartMint(diploma)}
-                                className="text-green-600 hover:text-green-900 px-2 py-1 rounded hover:bg-green-50"
+                                className="text-green-600 hover:text-green-800 font-medium text-sm"
                               >
-                                Mint SBT
+                                Mint
                               </button>
                             )}
                             
                             {diploma.status !== 'minted' && (
                               <button
                                 onClick={() => handleDeleteDiploma(diploma.id, diploma.nama_lengkap, diploma.status)}
-                                className="text-red-600 hover:text-red-900 px-2 py-1 rounded hover:bg-red-50"
+                                className="text-red-600 hover:text-red-800 font-medium text-sm"
                               >
                                 Hapus
                               </button>
@@ -795,7 +805,7 @@ export default function DataIjazahPage() {
                       {/* Expanded Row (Detail Lengkap) */}
                       {expandedRow === diploma.id && (
                         <tr className="bg-gray-50">
-                          <td colSpan={8} className="px-6 py-4">
+                          <td colSpan={8} className="px-4 py-4">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 bg-white rounded-lg border">
                               {/* Kolom Kiri */}
                               <div className="space-y-4">
@@ -807,7 +817,7 @@ export default function DataIjazahPage() {
                                       <p className="font-medium">{diploma.nama_lengkap}</p>
                                     </div>
                                     <div>
-                                      <p className="text-gray-500">NIM</p>
+                                      <p className="text-gray-500">NPM</p>
                                       <p className="font-medium font-mono">{diploma.npm}</p>
                                     </div>
                                     <div>
@@ -916,7 +926,7 @@ export default function DataIjazahPage() {
                                     <div>
                                       <p className="text-gray-500 text-sm">Status</p>
                                       <div className="flex items-center space-x-2">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(diploma.status)}`}>
+                                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(diploma.status)}`}>
                                           {getStatusLabel(diploma.status)}
                                         </span>
                                         {diploma.status === 'verified' ? (
@@ -942,13 +952,13 @@ export default function DataIjazahPage() {
                                       <>
                                         <button
                                           onClick={() => handleStartMint(diploma)}
-                                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
+                                          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-medium text-sm"
                                         >
                                           Mint SBT
                                         </button>
                                         <button
                                           onClick={() => handleDeleteDiploma(diploma.id, diploma.nama_lengkap, diploma.status)}
-                                          className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition font-medium text-sm"
+                                          className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
                                         >
                                           Hapus Data
                                         </button>
@@ -957,14 +967,14 @@ export default function DataIjazahPage() {
                                             navigator.clipboard.writeText(diploma.certificate_id);
                                             alert('Certificate ID berhasil disalin!');
                                           }}
-                                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition font-medium text-sm"
+                                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition font-medium text-sm"
                                         >
                                           Salin ID
                                         </button>
                                       </>
                                     ) : diploma.status === 'minted' ? (
                                       <div className="w-full">
-                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                        <div className="bg-gray-50 p-3 rounded border border-gray-200">
                                           <div className="flex items-start">
                                             <div className="text-gray-500 mr-2">🔒</div>
                                             <div>
@@ -979,7 +989,7 @@ export default function DataIjazahPage() {
                                     ) : (
                                       <button
                                         onClick={() => handleDeleteDiploma(diploma.id, diploma.nama_lengkap, diploma.status)}
-                                        className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition font-medium text-sm"
+                                        className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
                                       >
                                         Hapus Data
                                       </button>
@@ -1000,46 +1010,39 @@ export default function DataIjazahPage() {
         </div>
 
         {/* Pagination Info */}
-        <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Menampilkan {filteredDiplomas.length} dari {diplomas.length} ijazah
-          </div>
-          
-          <div className="mt-2 md:mt-0">
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                <span>Pending: {stats.pending}</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                <span>Verified: {stats.verified}</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                <span>Minted: {stats.minted}</span>
-              </div>
-            </div>
-          </div>
+        <div className="text-center text-sm text-gray-600 mb-6">
+          <p>Menampilkan {filteredDiplomas.length} dari {diplomas.length} ijazah</p>
         </div>
-
-        {/* Info Section */}
-        <div className="mt-6 bg-blue-50 rounded-xl p-4">
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-blue-600">ℹ️</span>
+        <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+          <h4 className="text-sm font-semibold text-gray-800 mb-2">Aturan Data Ijazah</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
+            <div className="flex items-start">
+              <span className="text-yellow-500 mr-2">•</span>
+              <span><strong>Pending:</strong> Menunggu verifikasi admin</span>
             </div>
-            <div>
-              <h4 className="text-sm font-medium text-blue-900 mb-1">Aturan Data Ijazah</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• <strong>Pending</strong>: Menunggu verifikasi admin</li>
-                <li>• <strong>Verified</strong>: Sudah diverifikasi, siap di-mint</li>
-                <li>• <strong>Minted</strong>: Sudah di-mint ke blockchain</li>
-                <li>• <strong>Rejected</strong>: Ditolak dengan catatan alasan</li>
-                <li>• <span className="font-bold text-red-600">❌ Data Minted tidak dapat diubah/dihapus</span></li>
-                <li>• <span className="font-bold text-green-600">✅ Hanya data Verified yang bisa di-mint</span></li>
-                <li>• Minting adalah proses satu kali yang tidak dapat diulang</li>
-              </ul>
+            <div className="flex items-start">
+              <span className="text-blue-500 mr-2">•</span>
+              <span><strong>Verified:</strong> Sudah diverifikasi, siap di-mint</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-green-500 mr-2">•</span>
+              <span><strong>Minted:</strong> Sudah di-mint ke blockchain</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-red-500 mr-2">•</span>
+              <span><strong>Rejected:</strong> Ditolak dengan catatan alasan</span>
+            </div>
+            <div className="flex items-start col-span-1 md:col-span-2">
+              <span className="text-red-500 mr-2">❌</span>
+              <span><strong>Data Minted tidak dapat diubah/dihapus</strong></span>
+            </div>
+            <div className="flex items-start col-span-1 md:col-span-2">
+              <span className="text-green-500 mr-2">✅</span>
+              <span><strong>Hanya data Verified yang bisa di-mint</strong></span>
+            </div>
+            <div className="flex items-start col-span-1 md:col-span-2">
+              <span className="text-gray-500 mr-2">•</span>
+              <span>Minting adalah proses satu kali yang tidak dapat diulang</span>
             </div>
           </div>
         </div>

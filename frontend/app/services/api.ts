@@ -43,6 +43,9 @@ export interface Diploma {
   uploaded_by: string;
   verified_by?: string;
   minted_by?: string;
+  // TAMBAHKAN FIELD INI:
+  nomor_sk_rektor?: string;
+  tanggal_sk_rektor?: string;
 }
 
 // Interface baru untuk dashboard stats dengan data lengkap
@@ -269,15 +272,15 @@ export const diplomaAPI = {
   },
 
   // Cari ijazah berdasarkan NIM
-  getDiplomaByNim: async (nim: string): Promise<ApiResponse<Diploma>> => {
-    console.log(`🔍 [API] Getting diploma by NIM: ${nim}`);
-    return apiRequest(`/diplomas/nim/${nim}`);
+  getDiplomaByNpm: async (npm: string): Promise<ApiResponse<Diploma>> => {
+    console.log(`🔍 [API] Getting diploma by NPM: ${npm}`);
+    return apiRequest(`/diplomas/npm/${npm}`);
   },
 
   // Verifikasi ijazah
-  verifyDiploma: async (id: number): Promise<ApiResponse> => {
-    console.log(`✅ [API] Verifying diploma ID: ${id}`);
-    return apiRequest(`/diplomas/verify/${id}`, 'POST');
+  verifyDiploma: async (nim: string): Promise<ApiResponse> => {
+    console.log(`✅ [API] Verifying diploma NIM: ${nim}`);
+    return apiRequest(`/diplomas/verify/${nim}`, 'GET');
   },
 
   // Update data setelah minting ke Blockchain
