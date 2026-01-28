@@ -20,6 +20,7 @@ export default function AdminLayout({
     { href: '/admin/upload-ijazah', label: 'Upload Ijazah', icon: '📤' },
     { href: '/admin/mint-sbt', label: 'Mint SBT', icon: '🪙' },
     { href: '/admin/data-ijazah', label: 'Data Ijazah', icon: '📁' },
+    { href: '/admin/buat-akun', label: 'Buat Akun', icon: '👤' },
   ]
 
   const handleLogout = () => {
