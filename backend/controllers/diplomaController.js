@@ -186,6 +186,39 @@ exports.getDiplomaByNpm = async (req, res) => {
   }
 };
 
+// @desc    Get ijazah berdasarkan certificate ID
+// @route   GET /api/diplomas/certificate/:certificateId
+// @access  Public
+exports.getDiplomaByCertificateId = async (req, res) => {
+  try {
+    const { certificateId } = req.params;
+    
+    // Cari di database berdasarkan certificate_id
+    const diploma = await Diploma.findOne({ 
+      where: { certificate_id: certificateId }
+    });
+    
+    if (!diploma) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Ijazah tidak ditemukan' 
+      });
+    }
+    
+    return res.json({ 
+      success: true, 
+      data: diploma 
+    });
+    
+  } catch (error) {
+    console.error('Error fetching diploma by certificate ID:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Terjadi kesalahan server' 
+    });
+  }
+};
+
 // @desc    Verify ijazah (cek keaslian)
 // @route   GET /api/diplomas/verify/:npm
 // @access  Public

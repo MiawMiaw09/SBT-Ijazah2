@@ -36,8 +36,8 @@ app.get('/', (req, res) => {
       getAll: 'GET /api/diplomas',
       getPending: 'GET /api/diplomas/pending',
       getById: 'GET /api/diplomas/:id',
-      getByNIM: 'GET /api/diplomas/nim/:nim',
-      verify: 'GET /api/diplomas/verify/:nim',
+      getByNPM: 'GET /api/diplomas/npm/:npm',
+      verify: 'GET /api/diplomas/verify/:npm',
       mint: 'PUT /api/diplomas/mint/:id',
       stats: 'GET /api/diplomas/stats/dashboard'
     },
@@ -87,7 +87,7 @@ db.syncDatabase(false, true).then(() => {
     console.log(`   📍 Home: http://localhost:${PORT}`);
     console.log(`   📤 Upload: POST http://localhost:${PORT}/api/diplomas/upload`);
     console.log(`   📋 Pending: GET http://localhost:${PORT}/api/diplomas/pending`);
-    console.log(`   ✅ Verify: GET http://localhost:${PORT}/api/diplomas/verify/:nim`);
+    console.log(`   ✅ Verify: GET http://localhost:${PORT}/api/diplomas/verify/:npm`);
     console.log(`   🪙 Mint: PUT http://localhost:${PORT}/api/diplomas/mint/:id`);
     console.log(`   📊 Stats: GET http://localhost:${PORT}/api/diplomas/stats/dashboard\n`);
   });

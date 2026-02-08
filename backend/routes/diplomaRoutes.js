@@ -30,7 +30,9 @@ router.get('/npm/:npm', diplomaController.getDiplomaByNpm);
 // @desc    Verify keaslian ijazah
 router.get('/verify/:npm', diplomaController.verifyDiploma);
 
-
+// @route   GET /api/diplomas/certificate/:certificateId
+// @desc    Get ijazah by certificate ID (untuk verifikasi publik)
+router.get('/certificate/:certificateId', diplomaController.getDiplomaByCertificateId);
 
 // @route   PUT /api/diplomas/mint/:id
 // @desc    Mark ijazah sebagai minted (SBT)
