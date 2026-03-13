@@ -221,7 +221,7 @@ export default function LoginPage() {
                 <div>
                   <h4 className="text-sm font-medium text-blue-900 mb-1">Informasi Login</h4>
                   <p className="text-sm text-blue-700">
-                    Klik "Masukkan Wallet Address" untuk mulai. Anda bisa memasukkan wallet address manual atau memilih dari contoh yang disediakan.
+                    Klik "Masukkan Wallet Address" untuk mulai. 
                   </p>
                 </div>
               </div>
@@ -232,7 +232,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-blue-200 text-sm">
-            Sistem Ijazah Digital &copy; 2024 Universitas Widya Dharma Pontianak
+            Sistem Ijazah Digital &copy; 2026 Universitas Widya Dharma Pontianak
           </p>
         </div>
       </div>

@@ -287,7 +287,6 @@ export default function HomePage() {
             </p>
             <p className="text-gray-500">
               &copy; {new Date().getFullYear()} Universitas Widya Dharma Pontianak. 
-              <span className="block text-xs mt-1">Smart Contract Address: 0xUNIVERSITY_SBT</span>
             </p>
           </div>
         </div>

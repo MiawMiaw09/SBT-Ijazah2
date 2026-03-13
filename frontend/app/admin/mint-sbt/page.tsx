@@ -51,6 +51,9 @@ export default function MintSbtPage() {
     estimatedGas: '0.01'
   });
 
+  // Base API URL
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
   // Load data dari API saat komponen mount
   useEffect(() => {
     loadDiplomas();
@@ -125,10 +128,9 @@ export default function MintSbtPage() {
       
       // OPTION 3: Coba fetch langsung ke endpoint API
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        console.log('🔍 [13] Trying direct fetch to:', `${apiBaseUrl}/api/diplomas`);
+        console.log('🔍 [13] Trying direct fetch to:', `${API_BASE_URL}/api/diplomas`);
         
-        const directResponse = await fetch(`${apiBaseUrl}/api/diplomas`, {
+        const directResponse = await fetch(`${API_BASE_URL}/api/diplomas`, {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -216,15 +218,6 @@ export default function MintSbtPage() {
   // Toggle expanded row (untuk melihat detail lengkap)
   const toggleExpandRow = (id: number) => {
     setExpandedRow(expandedRow === id ? null : id);
-  };
-
-  // Format file size
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // Format date untuk display - SAMA SEPERTI DI DATA IJAZAH
@@ -380,15 +373,13 @@ export default function MintSbtPage() {
     loadDiplomas();
   };
 
-  // Handle hapus selected (batch) - FUNGSI YANG SUDAH DIPERBAIKI
+  // Handle hapus selected (batch)
   const handleDeleteSelected = async () => {
     const selectedItems = diplomas.filter(item => item.selected);
     if (selectedItems.length === 0) {
       alert('Pilih minimal satu ijazah untuk dihapus!');
       return;
     }
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     
     // Filter data yang sudah di-mint (tidak bisa dihapus)
     const deletableItems = selectedItems.filter(item => item.status !== 'minted');
@@ -413,7 +404,6 @@ export default function MintSbtPage() {
           
           if (!deleteResponse.ok) {
             console.warn(`⚠️ API delete failed for ${item.id}`);
-            // Tetap anggap berhasil untuk lokal state
             return { id: item.id, success: true };
           }
           
@@ -422,7 +412,6 @@ export default function MintSbtPage() {
           return { id: item.id, success: true };
         } catch (apiError) {
           console.warn(`⚠️ API delete call failed for ${item.id}:`, apiError);
-          // Tetap anggap berhasil untuk lokal state
           return { id: item.id, success: true };
         }
       });
@@ -447,22 +436,18 @@ export default function MintSbtPage() {
     }
   };
 
-  // Handle hapus single - FUNGSI YANG SUDAH DIPERBAIKI
-  const handleDeleteSingle = async (id: number, name: string, nim: string) => {
+  // Handle hapus single
+  const handleDeleteSingle = async (id: number, name: string, nim: string, status: string) => {
+    if (status === 'minted') {
+      alert('❌ Data yang sudah di-mint tidak dapat dihapus!\n\nAlasan: Data sudah tercatat di blockchain dan tidak dapat diubah.');
+      return;
+    }
+    
     if (!confirm(`Anda akan menghapus ijazah:\n${name} (${nim})\n\nLanjutkan?`)) {
       return;
     }
     
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      
-      // Cek status item terlebih dahulu
-      const item = diplomas.find(item => item.id === id);
-      if (item?.status === 'minted') {
-        alert('❌ Data yang sudah di-mint tidak dapat dihapus!');
-        return;
-      }
-      
       const deleteResponse = await fetch(`${API_BASE_URL}/api/diplomas/${id}`, {
         method: 'DELETE'
       });
@@ -493,8 +478,22 @@ export default function MintSbtPage() {
   const pendingCount = diplomas.filter(item => item.status === "pending").length;
   const mintedCount = diplomas.filter(item => item.status === "minted").length;
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Mengambil data dari: {API_BASE_URL}/api/diplomas
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-full mx-auto p-6">
+    <div className="min-h-screen bg-gray-50">
       {/* Popup Mint Flow */}
       {mintStep !== 'idle' && currentMintingItem && (
         <MintPopup
@@ -507,215 +506,144 @@ export default function MintSbtPage() {
         />
       )}
 
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">🪙 Mint Soulbound Token (SBT)</h1>
-            <p className="text-gray-600">Daftar Ijazah untuk di-mint menjadi Soulbound Token (SBT)</p>
-            <div className="mt-2 flex items-center space-x-2 text-sm">
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Total: {totalCount}</span>
-              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Pending: {pendingCount}</span>
-              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">Minted: {mintedCount}</span>
+      {/* Konten Utama */}
+      <div className="container mx-auto px-4 py-6">
+        {/* Header - DISESUAIKAN DENGAN DATA IJAZAH */}
+        <div className="mb-8">
+          <h1 className="text-xl font-bold text-gray-800 mb-2">🪙 Mint Soulbound Token (SBT)</h1>
+          <p className="text-gray-600">Daftar Ijazah untuk di-mint menjadi Soulbound Token (SBT)</p>
+        </div>
+
+        {/* Info Box - DISESUAIKAN DENGAN DATA IJAZAH */}
+        <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100">
+          <h4 className="text-sm font-semibold text-blue-800 mb-2">ℹ️ Informasi Penting</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
+            <div className="flex items-start">
+              <span className="text-yellow-500 mr-2">•</span>
+              <span><strong>Data Ijazah:</strong> Pastikan data ijazah sudah valid sebelum di-mint</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-purple-500 mr-2">•</span>
+              <span><strong>Pending:</strong> Data ijazah yang menunggu untuk di-mint</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-500 mr-2">•</span>
+              <span><strong>Mode Hapus:</strong> Data Ijazah yang salah dapat dihapus</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-red-500 mr-2">❌</span>
+              <span><strong>Perhatian:</strong> Data yang sudah di-mint tidak dapat dihapus dan diubah</span>
             </div>
           </div>
-          <div className="flex flex-col space-y-2">
-            <button
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-            >
-              {isLoading ? 'Memuat...' : '🔄 Refresh Data'}
-            </button>
-            <button
-              onClick={() => {
-                console.log('📊 Current diplomas state:', diplomas);
-                console.log('📈 Statistics:', {
-                  total: totalCount,
-                  pending: pendingCount,
-                  minted: mintedCount,
-                  selected: selectedCount
-                });
-                console.log('🌐 API Status:', apiStatus);
-              }}
-              className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition text-xs"
-            >
-              Debug State
-            </button>
-          </div>
         </div>
-        
-        <div className="mt-2 text-sm text-gray-500 bg-blue-50 p-3 rounded-lg">
-          <div className="font-medium">ℹ️ Halaman ini menampilkan data ijazah dengan status PENDING</div>
-          <ul className="mt-1 ml-5 list-disc">
-            <li><span className="text-yellow-600">Pending</span>: Siap di-mint (bisa dipilih)</li>
-            <li><span className="text-purple-600">Minted</span>: Sudah di-mint (tidak bisa dipilih)</li>
-            <li>Mode: <strong className="text-yellow-600">Sandbox/Simulasi</strong></li>
-            <li><strong>Tidak ada proses verifikasi</strong> - langsung bisa di-mint setelah upload</li>
-            <li><strong>⚠️ Perhatian</strong>: Data yang sudah di-mint tidak dapat dihapus</li>
-            <li><strong>💡 Fitur Baru</strong>: Klik "Mint" → popup muncul → langsung jadi "Minted"</li>
-          </ul>
-        </div>
-      </div>
 
-      {/* API Error State */}
-      {apiStatus === 'error' && !isLoading && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <div className="text-red-600 mr-3">❌</div>
-            <div>
-              <p className="font-medium text-red-800">Gagal memuat data dari API</p>
-              <p className="text-sm text-red-600 mt-1">
-                Cek koneksi API dan database. Pastikan endpoint tersedia.
-              </p>
-              <div className="mt-2">
-                <button
-                  onClick={() => window.open('http://localhost:5000/api/diplomas', '_blank')}
-                  className="text-sm text-blue-600 hover:text-blue-800 mr-4"
-                >
-                  Buka API di Tab Baru
-                </button>
-                <button
-                  onClick={handleRefresh}
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Coba Lagi
-                </button>
+        {/* API Error State */}
+        {apiStatus === 'error' && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="text-red-600 mr-3 text-xl">❌</div>
+              <div>
+                <p className="font-medium text-red-800">Gagal memuat data dari API</p>
+                <p className="text-sm text-red-600 mt-1">
+                  Cek koneksi API dan database. Pastikan endpoint tersedia.
+                </p>
+                <div className="mt-3">
+                  <button
+                    onClick={() => window.open(`${API_BASE_URL}/api/diplomas`, '_blank')}
+                    className="text-sm text-blue-600 hover:text-blue-800 mr-4 font-medium"
+                  >
+                    Buka API di Tab Baru
+                  </button>
+                  <button
+                    onClick={handleRefresh}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Coba Lagi
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Data</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {isLoading ? '...' : totalCount}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-lg">📄</span>
-            </div>
+        {/* Statistik - DISESUAIKAN DENGAN DATA IJAZAH */}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Total Data</p>
+            <p className="text-2xl font-bold text-gray-900">{totalCount}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Pending</p>
+            <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Minted</p>
+            <p className="text-2xl font-bold text-green-600">{mintedCount}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <p className="text-sm text-gray-600 font-medium">Terpilih</p>
+            <p className="text-2xl font-bold text-indigo-600">{selectedCount}</p>
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600">
-                {isLoading ? '...' : pendingCount}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-              <span className="text-yellow-600 text-lg">⏳</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Minted</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {isLoading ? '...' : mintedCount}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-              <span className="text-purple-600 text-lg">🏆</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Terpilih</p>
-              <p className="text-2xl font-bold text-indigo-600">
-                {isLoading ? '...' : selectedCount}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-              <span className="text-indigo-600 text-lg">📌</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Action Bar */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium text-gray-700">
-              {selectedCount} ijazah terpilih dari {pendingCount} pending
-            </span>
-            <button
-              onClick={handleDeleteSelected}
-              disabled={selectedCount === 0 || isLoading || apiStatus === 'error'}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition duration-200 ${
-                selectedCount > 0 && !isLoading && apiStatus !== 'error'
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isLoading ? 'Memuat...' : `🗑️ Hapus Selected (${selectedCount})`}
-            </button>
-            <button
-              onClick={() => router.push('/admin/upload-ijazah')}
-              className="px-4 py-2 rounded-lg font-medium text-sm bg-blue-600 text-white hover:bg-blue-700"
-            >
-              + Upload Ijazah Baru
-            </button>
-          </div>
-          <div className="text-sm text-gray-500 flex items-center space-x-2">
-            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-              Total: {totalCount}
-            </span>
-            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
-              Pending: {pendingCount}
-            </span>
-            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
-              Minted: {mintedCount}
-            </span>
-            {selectedCount > 0 && (
-              <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs">
-                Terpilih: {selectedCount}
+        {/* Action Bar - DISESUAIKAN DENGAN DATA IJAZAH */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-gray-700">
+                {selectedCount} ijazah terpilih dari {pendingCount} pending
               </span>
-            )}
+              <button
+                onClick={handleDeleteSelected}
+                disabled={selectedCount === 0 || isLoading || apiStatus === 'error'}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition duration-200 ${
+                  selectedCount > 0 && !isLoading && apiStatus !== 'error'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isLoading ? 'Memuat...' : `🗑️ Hapus Selected (${selectedCount})`}
+              </button>
+              <button
+                onClick={() => router.push('/admin/upload-ijazah')}
+                className="px-4 py-2 rounded-lg font-medium text-sm bg-blue-600 text-white hover:bg-blue-700"
+              >
+                + Upload Ijazah Baru
+              </button>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium flex items-center"
+              >
+                <span className="mr-2">🔄</span>
+                {isLoading ? 'Memuat...' : 'Refresh Data'}
+              </button>
+              <button
+                onClick={() => {
+                  console.log('📊 Current diplomas state:', diplomas);
+                  console.log('📈 Statistics:', {
+                    total: totalCount,
+                    pending: pendingCount,
+                    minted: mintedCount,
+                    selected: selectedCount
+                  });
+                  console.log('🌐 API Status:', apiStatus);
+                }}
+              >
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Loading State */}
-      {isLoading ? (
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Memuat data ijazah dari database...</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Mengambil data dengan status: PENDING
-          </p>
-          <div className="mt-4 space-y-2">
-            <p className="text-sm text-gray-500">Debug info:</p>
-            <button 
-              onClick={() => window.open('http://localhost:5000/api/diplomas', '_blank')}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Buka API di Tab Baru
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* Table */
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {/* Table - DISESUAIKAN DENGAN DATA IJAZAH */}
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="w-12 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center">
                       <input
                         type="checkbox"
@@ -726,362 +654,316 @@ export default function MintSbtPage() {
                       />
                     </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    No
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    NO
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nama Mahasiswa
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    NAMA
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NPM
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Program Studi
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PRODI
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tahun Lulus
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    TAHUN
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Token ID
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    STATUS
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    AKSI
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aksi
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Detail
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    DETAIL
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {diplomas.map((item, index) => (
-                  <>
-                    <tr 
-                      key={item.id}
-                      className={`hover:bg-gray-50 transition duration-150 ${
-                        item.selected ? 'bg-blue-50' : ''
-                      }`}
-                    >
-                      {/* Checkbox */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={item.selected}
-                            onChange={() => toggleSelect(item.id)}
-                            disabled={item.status === "minted"}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
-                          />
-                        </div>
-                      </td>
-                      
-                      {/* No */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {index + 1}
-                      </td>
-                      
-                      {/* Nama Mahasiswa */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
+                {diplomas.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                      <div>
+                        <div className="text-5xl mb-4">📄</div>
+                        <p className="text-lg font-medium text-gray-700 mb-2">Tidak ada data ijazah dengan status PENDING</p>
+                        <p className="text-gray-600 mb-4">
+                          Semua ijazah sudah di-mint atau belum ada yang diupload
+                        </p>
+                        <button
+                          onClick={() => router.push('/admin/upload-ijazah')}
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2"
+                        >
+                          + Upload Ijazah Baru
+                        </button>
+                        <button
+                          onClick={handleRefresh}
+                          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                          Refresh Data
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  diplomas.map((item, index) => (
+                    <>
+                      <tr 
+                        key={item.id}
+                        className={`hover:bg-gray-50 transition duration-150 ${
+                          item.selected ? 'bg-blue-50' : ''
+                        }`}
+                      >
+                        {/* Checkbox */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={item.selected}
+                              onChange={() => toggleSelect(item.id)}
+                              disabled={item.status === "minted"}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                            />
+                          </div>
+                        </td>
+                        
+                        {/* No */}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                          {index + 1}
+                        </td>
+                        
+                        {/* Nama Mahasiswa */}
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {item.nama_lengkap}
                           </div>
                           <div className="text-xs text-gray-500">
-                            Cert ID: {item.certificate_id}
+                            {item.certificate_id}
                           </div>
-                        </div>
-                      </td>
+                        </td>
+                        
+                        {/* NIM */}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {item.npm}
+                        </td>
+                        
+                        {/* Program Studi */}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {item.program_studi}
+                        </td>
+                        
+                        {/* Tahun Lulus */}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {item.tanggal_lulus ? new Date(item.tanggal_lulus).getFullYear() : '-'}
+                        </td>
+                        
+                        {/* Status */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            item.status === "minted" 
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {item.status === "minted" ? "Minted" : "Pending"}
+                          </span>
+                        </td>
+                        
+                        {/* Aksi */}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <div className="flex flex-wrap gap-2">
+                            {item.status !== 'minted' && (
+                              <>
+                                <button
+                                  onClick={() => handleStartMintSingle(item)}
+                                  className="text-green-600 hover:text-green-800 font-medium text-sm"
+                                >
+                                  Mint
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm, item.status)}
+                                  className="text-red-600 hover:text-red-800 font-medium text-sm"
+                                >
+                                  Hapus
+                                </button>
+                              </>
+                            )}
+                            {item.status === 'minted' && (
+                              <span className="text-gray-400 text-xs px-2 py-1" title="Data sudah di-mint ke blockchain">
+                                Immutable
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        
+                        {/* Detail */}
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => toggleExpandRow(item.id)}
+                            className="text-blue-600 hover:text-blue-800 font-medium underline"
+                          >
+                            {expandedRow === item.id ? "Sembunyikan" : "Lihat Detail"}
+                          </button>
+                        </td>
+                      </tr>
                       
-                      {/* NIM */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        {item.npm}
-                      </td>
-                      
-                      {/* Program Studi */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{item.program_studi}</div>
-                        <div className="text-xs text-gray-500">{item.fakultas || '-'}</div>
-                      </td>
-                      
-                      {/* Tahun Lulus */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>{item.tanggal_lulus ? new Date(item.tanggal_lulus).getFullYear() : '-'}</div>
-                        <div className="text-xs text-gray-500">
-                          {formatDateDisplay(item.tanggal_lulus)}
-                        </div>
-                      </td>
-                      
-                      {/* Token ID */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">
-                          {item.token_id || 'Belum di-mint'}
-                        </div>
-                      </td>
-                      
-                      {/* Status */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          item.status === "minted" 
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {item.status.toUpperCase()}
-                        </span>
-                      </td>
-                      
-                      {/* Aksi - TOMBOL MINT & HAPUS */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
-                        <button
-                          onClick={() => handleStartMintSingle(item)}
-                          disabled={item.status === "minted"}
-                          className={`font-medium ${
-                            item.status === "minted"
-                              ? 'text-purple-400 cursor-not-allowed'
-                              : 'text-green-600 hover:text-green-900'
-                          }`}
-                        >
-                          {item.status === "minted" 
-                            ? "✓ Sudah Mint" 
-                            : "Mint Sekarang"
-                          }
-                        </button>
-                        <span className="text-gray-300">|</span>
-                        <button
-                          onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm)}
-                          className="text-red-600 hover:text-red-900 font-medium"
-                        >
-                          Hapus
-                        </button>
-                      </td>
-                      
-                      {/* Detail */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => toggleExpandRow(item.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          {expandedRow === item.id ? "Sembunyikan" : "Lihat Detail"}
-                        </button>
-                      </td>
-                    </tr>
-                    
-                    {/* Expanded Row (Detail Lengkap) - PERUBAHAN: HAPUS TOKEN ID, TAMBAH TOMBOL MINT IJAZAH */}
-                    {expandedRow === item.id && (
-                      <tr className="bg-gray-50">
-                        <td colSpan={10} className="px-6 py-4">
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 bg-white rounded-lg border">
-                            {/* Kolom Kiri - SAMA SEPERTI DI DATA IJAZAH */}
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Mahasiswa Lengkap</h4>
-                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                  <div>
-                                    <p className="text-gray-500">Nama Lengkap</p>
-                                    <p className="font-medium">{item.nama_lengkap}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">NPM</p>
-                                    <p className="font-medium font-mono">{item.npm}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">NIK</p>
-                                    <p className="font-medium font-mono">{item.nik || '-'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Tempat/Tgl Lahir</p>
-                                    <p className="font-medium">{item.tempat_tanggal_lahir || '-'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Program Studi</p>
-                                    <p className="font-medium">{item.program_studi}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Fakultas</p>
-                                    <p className="font-medium">{item.fakultas || '-'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Gelar Akademik</p>
-                                    <p className="font-medium">{item.gelar_akademik}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">IPK</p>
-                                    <p className="font-medium">{item.ipk || '-'}</p>
+                      {/* Expanded Row (Detail Lengkap) - DISESUAIKAN DENGAN DATA IJAZAH */}
+                      {expandedRow === item.id && (
+                        <tr className="bg-gray-50">
+                          <td colSpan={9} className="px-4 py-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 bg-white rounded-lg border">
+                              {/* Kolom Kiri */}
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Mahasiswa Lengkap</h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                      <p className="text-gray-500">Nama Lengkap</p>
+                                      <p className="font-medium">{item.nama_lengkap}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">NPM</p>
+                                      <p className="font-medium font-mono">{item.npm}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">NIK</p>
+                                      <p className="font-medium font-mono">{item.nik || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Tempat/Tgl Lahir</p>
+                                      <p className="font-medium">{item.tempat_tanggal_lahir || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Program Studi</p>
+                                      <p className="font-medium">{item.program_studi}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Fakultas</p>
+                                      <p className="font-medium">{item.fakultas || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Gelar Akademik</p>
+                                      <p className="font-medium">{item.gelar_akademik}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">IPK</p>
+                                      <p className="font-medium">{item.ipk || '-'}</p>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                              
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Akademik</h4>
-                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                  <div>
-                                    <p className="text-gray-500">Tanggal Lulus</p>
-                                    <p className="font-medium">
-                                      {formatDateDisplay(item.tanggal_lulus)}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Tahun Akademik</p>
-                                    <p className="font-medium">{item.tahun_akademik || '-'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Yudisium</p>
-                                    <p className="font-medium">{item.yudisium || '-'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Judul Skripsi</p>
-                                    <p className="font-medium">{item.judul_skripsi || '-'}</p>
-                                  </div>
-                                  {/* TAMBAHKAN NOMOR SK REKTOR DAN TANGGAL SK REKTOR */}
-                                  <div>
-                                    <p className="text-gray-500">Nomor SK Rektor</p>
-                                    <p className="font-medium">{item.nomor_sk_rektor || '-'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500">Tanggal SK Rektor</p>
-                                    <p className="font-medium">
-                                      {item.tanggal_sk_rektor ? formatDateDisplay(item.tanggal_sk_rektor) : '-'}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Kolom Kanan - PERUBAHAN: HAPUS TOKEN ID, TAMBAH TOMBOL MINT IJAZAH */}
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Blockchain & Sistem</h4>
-                                <div className="space-y-3">
-                                  <div>
-                                    <p className="text-gray-500 text-sm">Certificate ID</p>
-                                    <p className="font-medium font-mono text-sm bg-gray-100 p-2 rounded">
-                                      {item.certificate_id}
-                                    </p>
-                                  </div>
-                                  {/* DIHAPUS: Token ID */}
-                                  <div>
-                                    <p className="text-gray-500 text-sm">Wallet Address</p>
-                                    <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
-                                      {item.wallet_address || '-'}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500 text-sm">IPFS Hash</p>
-                                    <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
-                                      {item.file_hash || '-'}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500 text-sm">Contract Address</p>
-                                    <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
-                                      {item.contract_address || '-'}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500 text-sm">Transaction Hash</p>
-                                    <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
-                                      {item.transaction_hash || '-'}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-gray-500 text-sm">Status</p>
-                                    <div className="flex items-center space-x-2">
-                                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}`}>
-                                        {getStatusLabel(item.status)}
-                                      </span>
-                                      {item.status === 'verified' ? (
-                                        <button
-                                          onClick={() => handleStartMintSingle(item)}
-                                          className="text-sm text-green-600 hover:text-green-800 font-medium"
-                                        >
-                                          Mint SBT
-                                        </button>
-                                      ) : item.status === 'minted' ? (
-                                        <span className="text-sm text-gray-500">
-                                          (Immutable - tidak dapat diubah)
-                                        </span>
-                                      ) : null}
+                                
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Akademik</h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                      <p className="text-gray-500">Tanggal Lulus</p>
+                                      <p className="font-medium">
+                                        {formatDateDisplay(item.tanggal_lulus)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Tahun Akademik</p>
+                                      <p className="font-medium">{item.tahun_akademik || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Yudisium</p>
+                                      <p className="font-medium">{item.yudisium || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Judul Skripsi</p>
+                                      <p className="font-medium">{item.judul_skripsi || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Nomor SK Rektor</p>
+                                      <p className="font-medium">{item.nomor_sk_rektor || '-'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500">Tanggal SK Rektor</p>
+                                      <p className="font-medium">
+                                        {item.tanggal_sk_rektor ? formatDateDisplay(item.tanggal_sk_rektor) : '-'}
+                                      </p>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                               
-                              <div className="pt-4 border-t">
-                                <div className="flex space-x-3">
-                                  {/* TAMBAHKAN TOMBOL MINT IJAZAH DI SINI */}
-                                  <button
-                                    onClick={() => handleStartMintSingle(item)}
-                                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-medium text-sm"
-                                  >
-                                    Mint Ijazah
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm)}
-                                    className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
-                                  >
-                                    Hapus Data
-                                  </button>
+                              {/* Kolom Kanan */}
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Sistem</h4>
+                                  <div className="space-y-3">
+                                    <div>
+                                      <p className="text-gray-500 text-sm">Nomor Ijazah</p>
+                                      <p className="font-medium font-mono text-sm bg-gray-100 p-2 rounded">
+                                        {item.certificate_id}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500 text-sm">Wallet Address</p>
+                                      <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
+                                        {item.wallet_address || '-'}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-gray-500 text-sm">Status</p>
+                                      <div className="flex items-center space-x-2">
+                                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}`}>
+                                          {getStatusLabel(item.status)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="pt-4 border-t">
+                                  <div className="flex space-x-3">
+                                    {item.status !== 'minted' ? (
+                                      <>
+                                        <button
+                                          onClick={() => handleStartMintSingle(item)}
+                                          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-medium text-sm"
+                                        >
+                                          Mint Ijazah
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteSingle(item.id, item.nama_lengkap, item.npm, item.status)}
+                                          className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
+                                        >
+                                          Hapus Data
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <div className="w-full">
+                                        <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                          <div className="flex items-start">
+                                            <div className="text-gray-500 mr-2">🔒</div>
+                                            <div>
+                                              <p className="text-sm font-medium text-gray-700">Data Terproteksi</p>
+                                              <p className="text-xs text-gray-500">
+                                                Data sudah di-mint ke blockchain dan tidak dapat diubah/dihapus
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                ))}
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-
-          {/* Empty State */}
-          {diplomas.length === 0 && !isLoading && apiStatus === 'success' && (
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-5xl mb-4">📄</div>
-              <p className="text-gray-500 text-lg mb-2">Tidak ada data ijazah dengan status PENDING</p>
-              <p className="text-gray-400 text-sm mb-4">
-                Semua ijazah sudah di-mint atau belum ada yang diupload
-              </p>
-              <div className="space-y-2">
-                <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
-                  <button
-                    onClick={() => router.push('/admin/upload-ijazah')}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    + Upload Ijazah Baru
-                  </button>
-                  <button
-                    onClick={() => router.push('/admin/data-ijazah')}
-                    className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                  >
-                    Lihat Data Lengkap
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-      )}
 
-      {/* Info Section */}
-      <div className="mt-6 bg-blue-50 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-blue-600">ℹ️</span>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-blue-900 mb-1">Informasi Fitur</h4>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>• <strong>Tidak ada proses verifikasi</strong> - langsung mint setelah upload</li>
-              <li>• Hanya data dengan status <strong>Pending</strong> yang ditampilkan</li>
-              <li>• Data <strong>Minted</strong> tidak bisa diubah/dihapus</li>
-              <li>• <strong>Tombol Hapus Selected</strong>: Hapus data yang dipilih secara batch</li>
-              <li>• <strong>Tombol Hapus per baris</strong>: Hapus data satu per satu</li>
-              <li>• <strong>💡 Proses Mint Baru:</strong> Klik "Mint" → popup muncul → langsung jadi "Minted"</li>
-              <li>• <strong>Data yang di-mint</strong> akan hilang dari halaman ini dan muncul di Data Ijazah dengan status "Minted"</li>
-            </ul>
-          </div>
+        {/* Pagination Info */}
+        <div className="text-center text-sm text-gray-600 mb-6">
+          <p>Menampilkan {diplomas.length} data dengan status PENDING</p>
         </div>
       </div>
     </div>

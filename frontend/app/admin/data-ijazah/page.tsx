@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { formatDateTime } from '@/app/services/api';
-import MintPopup from '../../components/MintPopup';
-import { MintStep } from '../../types/ijazah';
 import { useRouter } from 'next/navigation';
 
 // Interface untuk data ijazah berdasarkan database
@@ -44,30 +42,6 @@ interface ExtendedDiploma {
   tanggal_sk_rektor?: string;
 }
 
-// Interface untuk IjazahData yang diharapkan MintPopup
-interface PopupDiplomaData {
-  id: number;
-  namaMahasiswa: string;
-  npm: string;
-  nik: string;
-  tempatTanggalLahir: string;
-  programStudi: string;
-  fakultas: string;
-  gelarAkademik: string;
-  tempattanggalLahir: string;
-  tanggalKelulusan: string;
-  tahunLulus: string;
-  nomorSKRektor: string;
-  tanggalSKRektor: string;
-  walletAddress: string;
-  ipfs: string;
-  alamatPenerbit: string;
-  tokenID: string;
-  certificateId: string;
-  status: 'Pending' | 'Minted';
-  selected: boolean;
-}
-
 export default function DataIjazahPage() {
   const router = useRouter();
   const [diplomas, setDiplomas] = useState<ExtendedDiploma[]>([]);
@@ -77,16 +51,6 @@ export default function DataIjazahPage() {
   const [programStudiFilter, setProgramStudiFilter] = useState<string>('all');
   const [tahunFilter, setTahunFilter] = useState<string>('all');
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
-  
-  // State untuk popup mint
-  const [mintStep, setMintStep] = useState<MintStep>('idle');
-  const [currentMintingItem, setCurrentMintingItem] = useState<PopupDiplomaData | null>(null);
-  const [mintProgress, setMintProgress] = useState({
-    isUploading: false,
-    uploadProgress: 0,
-    isMinting: false,
-    estimatedGas: '0.01'
-  });
 
   // Base API URL
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -95,108 +59,80 @@ export default function DataIjazahPage() {
     fetchDiplomas();
   }, []);
 
-  // **GUNAKAN API REAL, BUKAN MOCK DATA**
   const fetchDiplomas = useCallback(async () => {
     try {
       setLoading(true);
       console.log('🚀 [1] Fetching diplomas from API...');
       
-      // Coba endpoint utama (getAllDiplomas)
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/diplomas`);
-        console.log('📡 [2] API Response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('📊 [3] API Data received:', result);
-        
-        // Debug: Tampilkan struktur data pertama untuk memastikan field ada
-        if (result.data && result.data.length > 0) {
-          console.log('🔍 [3.1] First item structure:', Object.keys(result.data[0]));
-          console.log('🔍 [3.2] Has nomor_sk_rektor?', result.data[0]?.nomor_sk_rektor);
-          console.log('🔍 [3.3] Has tanggal_sk_rektor?', result.data[0]?.tanggal_sk_rektor);
-        }
-        
-        // Handle various response formats
-        let dataArray: any[] = [];
-        
-        if (Array.isArray(result)) {
-          dataArray = result;
-        } else if (result.data && Array.isArray(result.data)) {
-          dataArray = result.data;
-        } else if (result.success && result.data && Array.isArray(result.data)) {
-          dataArray = result.data;
-        } else {
-          console.warn('⚠️ Unexpected API response format:', result);
-          throw new Error('Unexpected API response format');
-        }
-        
-        if (dataArray.length === 0) {
-          console.log('ℹ️ API returned empty array');
-          setDiplomas([]);
-          return;
-        }
-        
-        // Format data sesuai interface - PERBAIKAN UTAMA DI SINI!
-        const formattedData: ExtendedDiploma[] = dataArray.map((item: any) => ({
-          id: item.id || item.ID || 0,
-          nama_lengkap: item.nama_lengkap || item.nama || '',
-          npm: item.npm || '',
-          nik: item.nik || '',
-          program_studi: item.program_studi || '',
-          gelar_akademik: item.gelar_akademik || '',
-          tempat_tanggal_lahir: item.tempat_tanggal_lahir || '',
-          fakultas: item.fakultas || '',
-          tanggal_lulus: item.tanggal_lulus || '',
-          ipk: item.ipk || 0,
-          judul_skripsi: item.judul_skripsi || '',
-          tahun_akademik: item.tahun_akademik || '',
-          yudisium: item.yudisium || '',
-          wallet_address: item.wallet_address || '',
-          transaction_hash: item.transaction_hash || '',
-          contract_address: item.contract_address || '',
-          token_id: item.token_id || '',
-          block_number: item.block_number || 0,
-          nama_file: item.nama_file || '',
-          path_file: item.path_file || '',
-          ukuran_file: item.ukuran_file || 0,
-          tipe_file: item.tipe_file || '',
-          file_hash: item.file_hash || '',
-          certificate_id: item.certificate_id || '',
-          status: item.status || 'pending',
-          verification_notes: item.verification_notes || '',
-          created_at: item.created_at || '',
-          updated_at: item.updated_at || '',
-          minted_at: item.minted_at || '',
-          uploaded_by: item.uploaded_by || '',
-          verified_by: item.verified_by || '',
-          minted_by: item.minted_by || '',
-          // TAMBAHKAN FIELD INI YANG TADINYA HILANG
-          nomor_sk_rektor: item.nomor_sk_rektor || '',
-          tanggal_sk_rektor: item.tanggal_sk_rektor || '',
-        }));
-        
-        // Debug: Cek apakah field sudah dimapping dengan benar
-        if (formattedData.length > 0) {
-          console.log('✅ [4] First formatted item:', {
-            nama: formattedData[0].nama_lengkap,
-            nomor_sk_rektor: formattedData[0].nomor_sk_rektor,
-            tanggal_sk_rektor: formattedData[0].tanggal_sk_rektor
-          });
-        }
-        
-        setDiplomas(formattedData);
-      } catch (error) {
-        console.error('🔥 [11] Critical error in fetchDiplomas:', error);
-        alert('❌ Gagal memuat data ijazah. Coba lagi nanti.');
-      } finally {
-        setLoading(false);
+      const response = await fetch(`${API_BASE_URL}/api/diplomas`);
+      console.log('📡 [2] API Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
+      const result = await response.json();
+      console.log('📊 [3] API Data received:', result);
+      
+      let dataArray: any[] = [];
+      
+      if (Array.isArray(result)) {
+        dataArray = result;
+      } else if (result.data && Array.isArray(result.data)) {
+        dataArray = result.data;
+      } else if (result.success && result.data && Array.isArray(result.data)) {
+        dataArray = result.data;
+      } else {
+        console.warn('⚠️ Unexpected API response format:', result);
+        throw new Error('Unexpected API response format');
+      }
+      
+      if (dataArray.length === 0) {
+        console.log('ℹ️ API returned empty array');
+        setDiplomas([]);
+        return;
+      }
+      
+      const formattedData: ExtendedDiploma[] = dataArray.map((item: any) => ({
+        id: item.id || item.ID || 0,
+        nama_lengkap: item.nama_lengkap || item.nama || '',
+        npm: item.npm || '',
+        nik: item.nik || '',
+        program_studi: item.program_studi || '',
+        gelar_akademik: item.gelar_akademik || '',
+        tempat_tanggal_lahir: item.tempat_tanggal_lahir || '',
+        fakultas: item.fakultas || '',
+        tanggal_lulus: item.tanggal_lulus || '',
+        ipk: item.ipk || 0,
+        judul_skripsi: item.judul_skripsi || '',
+        tahun_akademik: item.tahun_akademik || '',
+        yudisium: item.yudisium || '',
+        wallet_address: item.wallet_address || '',
+        transaction_hash: item.transaction_hash || '',
+        contract_address: item.contract_address || '',
+        token_id: item.token_id || '',
+        block_number: item.block_number || 0,
+        nama_file: item.nama_file || '',
+        path_file: item.path_file || '',
+        ukuran_file: item.ukuran_file || 0,
+        tipe_file: item.tipe_file || '',
+        file_hash: item.file_hash || '',
+        certificate_id: item.certificate_id || '',
+        status: item.status || 'pending',
+        verification_notes: item.verification_notes || '',
+        created_at: item.created_at || '',
+        updated_at: item.updated_at || '',
+        minted_at: item.minted_at || '',
+        uploaded_by: item.uploaded_by || '',
+        verified_by: item.verified_by || '',
+        minted_by: item.minted_by || '',
+        nomor_sk_rektor: item.nomor_sk_rektor || '',
+        tanggal_sk_rektor: item.tanggal_sk_rektor || '',
+      }));
+      
+      setDiplomas(formattedData);
     } catch (error) {
-      console.error('🔥 [11] Critical error in fetchDiplomas:', error);
+      console.error('🔥 Error in fetchDiplomas:', error);
       alert('❌ Gagal memuat data ijazah. Coba lagi nanti.');
     } finally {
       setLoading(false);
@@ -253,180 +189,6 @@ export default function DataIjazahPage() {
     setExpandedRow(expandedRow === id ? null : id);
   };
 
-  // === FUNGSI MINT SBT ===
-  const simulateIPFSUpload = async (): Promise<string> => {
-    return new Promise((resolve) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setMintProgress(prev => ({ ...prev, uploadProgress: progress }));
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          const fakeCID = `Qm${Math.random().toString(36).substring(2)}${Date.now().toString(36).substring(0, 10)}`;
-          resolve(fakeCID);
-        }
-      }, 200);
-    });
-  };
-
-  const simulateBlockchainMint = async (): Promise<{
-    tokenId: string, 
-    txHash: string, 
-    contractAddress: string, 
-    blockNumber: number
-  }> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const fakeTokenId = `SBT-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Date.now().toString().slice(-6)}`;
-        const fakeTxHash = `0x${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).substring(0, 8)}`;
-        const fakeContractAddress = `0x${Math.random().toString(36).substring(2, 42)}`;
-        const fakeBlockNumber = Math.floor(Math.random() * 1000000) + 1000000;
-        
-        resolve({ 
-          tokenId: fakeTokenId, 
-          txHash: fakeTxHash,
-          contractAddress: fakeContractAddress,
-          blockNumber: fakeBlockNumber
-        });
-      }, 2000);
-    });
-  };
-
-  // Fungsi untuk mengkonversi ExtendedDiploma ke PopupDiplomaData
-  const convertToPopupData = (diploma: ExtendedDiploma): PopupDiplomaData => {
-    return {
-      id: diploma.id,
-      namaMahasiswa: diploma.nama_lengkap,
-      npm: diploma.npm,
-      nik: diploma.nik || '',
-      tempatTanggalLahir: diploma.tempat_tanggal_lahir || '',
-      programStudi: diploma.program_studi,
-      fakultas: diploma.fakultas || '',
-      gelarAkademik: diploma.gelar_akademik,
-      tempattanggalLahir: diploma.tempat_tanggal_lahir || '',
-      tanggalKelulusan: diploma.tanggal_lulus,
-      tahunLulus: diploma.tanggal_lulus ? new Date(diploma.tanggal_lulus).getFullYear().toString() : '',
-      nomorSKRektor: diploma.nomor_sk_rektor || '',
-      tanggalSKRektor: diploma.tanggal_sk_rektor || '',
-      walletAddress: diploma.wallet_address || '',
-      ipfs: diploma.file_hash || '',
-      alamatPenerbit: diploma.contract_address || '0x1234567890abcdef1234567890abcdef12345678',
-      tokenID: diploma.token_id || diploma.certificate_id || `UWD-${new Date().getFullYear()}-${diploma.id}`,
-      certificateId: diploma.certificate_id || '',
-      status: diploma.status === 'minted' ? 'Minted' : 'Pending',
-      selected: false
-    };
-  };
-
-  const handleStartMint = (item: ExtendedDiploma) => {
-    if (item.status === 'minted') {
-      alert('Ijazah ini sudah di-mint!');
-      return;
-    }
-    
-    if (item.status !== 'verified') {
-      alert('Hanya ijazah yang sudah diverifikasi yang bisa di-mint!');
-      return;
-    }
-    
-    const popupData = convertToPopupData(item);
-    setCurrentMintingItem(popupData);
-    setMintStep('ipfs_upload');
-    setMintProgress({
-      isUploading: false,
-      uploadProgress: 0,
-      isMinting: false,
-      estimatedGas: '0.01'
-    });
-  };
-
-  const handleUploadToIPFS = async () => {
-    if (!currentMintingItem) return;
-    
-    setMintProgress(prev => ({ ...prev, isUploading: true, uploadProgress: 0 }));
-    
-    try {
-      await simulateIPFSUpload();
-      setMintProgress(prev => ({ ...prev, isUploading: false }));
-      setMintStep('blockchain_mint');
-    } catch (error) {
-      console.error('Error uploading to IPFS:', error);
-      alert('❌ Gagal upload ke IPFS. Silakan coba lagi.');
-      setMintStep('idle');
-    }
-  };
-
-  const handleMintToBlockchain = async () => {
-    if (!currentMintingItem) return;
-    
-    setMintProgress(prev => ({ ...prev, isMinting: true }));
-    
-    try {
-      const result = await simulateBlockchainMint();
-      
-      // Call real API to update mint status
-      try {
-        const updateResponse = await fetch(`${API_BASE_URL}/api/diplomas/${currentMintingItem.id}/mint`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            transaction_hash: result.txHash,
-            contract_address: result.contractAddress,
-            token_id: result.tokenId,
-            block_number: result.blockNumber,
-            minted_by: 'admin'
-          })
-        });
-        
-        if (!updateResponse.ok) {
-          console.warn('⚠️ API update failed, but continuing with local state update');
-        } else {
-          const updateResult = await updateResponse.json();
-          console.log('✅ API update successful:', updateResult);
-        }
-      } catch (apiError) {
-        console.warn('⚠️ API call failed, using local state only:', apiError);
-      }
-      
-      // Update local state
-      setDiplomas(prev => 
-        prev.map(item => 
-          item.id === currentMintingItem.id 
-            ? { 
-                ...item, 
-                status: 'minted',
-                transaction_hash: result.txHash,
-                contract_address: result.contractAddress,
-                token_id: result.tokenId,
-                block_number: result.blockNumber,
-                minted_at: new Date().toISOString(),
-                minted_by: 'admin',
-                updated_at: new Date().toISOString()
-              } 
-            : item
-        )
-      );
-      
-      setMintProgress(prev => ({ ...prev, isMinting: false }));
-      setMintStep('success');
-      
-    } catch (error) {
-      console.error('Error minting to blockchain:', error);
-      alert('❌ Gagal mint ke blockchain. Silakan coba lagi.');
-      setMintStep('idle');
-    }
-  };
-
-  const handleClosePopup = () => {
-    setMintStep('idle');
-    setCurrentMintingItem(null);
-    // Refresh data setelah popup ditutup
-    fetchDiplomas();
-  };
-
   // === FUNGSI HAPUS DATA ===
   const handleDeleteDiploma = async (id: number, nama: string, status: string) => {
     if (status === 'minted') {
@@ -439,23 +201,17 @@ export default function DataIjazahPage() {
     }
     
     try {
-      // Try to call real API for deletion
-      try {
-        const deleteResponse = await fetch(`${API_BASE_URL}/api/diplomas/${id}`, {
-          method: 'DELETE'
-        });
-        
-        if (!deleteResponse.ok) {
-          console.warn('⚠️ API delete failed, but continuing with local state update');
-        } else {
-          const deleteResult = await deleteResponse.json();
-          console.log('✅ API delete successful:', deleteResult);
-        }
-      } catch (apiError) {
-        console.warn('⚠️ API delete call failed, using local state only:', apiError);
+      const deleteResponse = await fetch(`${API_BASE_URL}/api/diplomas/${id}`, {
+        method: 'DELETE'
+      });
+      
+      if (!deleteResponse.ok) {
+        console.warn('⚠️ API delete failed, but continuing with local state update');
+      } else {
+        const deleteResult = await deleteResponse.json();
+        console.log('✅ API delete successful:', deleteResult);
       }
       
-      // Update local state
       setDiplomas(prev => prev.filter(item => item.id !== id));
       alert(`✅ Data ijazah ${nama} berhasil dihapus!`);
     } catch (error) {
@@ -519,34 +275,14 @@ export default function DataIjazahPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Konten Utama */}
       <div className="container mx-auto px-4 py-6">
-        {/* Popup Mint Flow */}
-        {mintStep !== 'idle' && currentMintingItem && (
-          <MintPopup
-            mintStep={mintStep}
-            currentMintingItem={currentMintingItem}
-            mintProgress={mintProgress}
-            onUploadToIPFS={handleUploadToIPFS}
-            onMintToBlockchain={handleMintToBlockchain}
-            onClose={handleClosePopup}
-          />
-        )}
-
-        {/* Bagian Data Ijazah */}
+        {/* Header */}
         <div className="mb-8">
           <h3 className="text-xl font-bold text-gray-800 mb-2">Data Ijazah</h3>
           <p className="text-gray-600">Kelola semua data ijazah yang terdaftar dalam sistem</p>
-          {diplomas.length > 0 && (
-            <div className="mt-1 text-sm text-gray-500">
-              <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded">
-                ✓ {diplomas.length} data ditemukan
-              </span>
-            </div>
-          )}
         </div>
 
-        {/* Statistik - DISESUAIKAN DENGAN GAMBAR */}
+        {/* Statistik - 4 KOLOM SESUAI GAMBAR */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-sm text-gray-600 font-medium">Total Ijazah</p>
@@ -556,21 +292,17 @@ export default function DataIjazahPage() {
             <p className="text-sm text-gray-600 font-medium">Pending</p>
             <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <p className="text-sm text-gray-600 font-medium">Verified</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.verified}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-sm text-gray-600 font-medium">Minted</p>
             <p className="text-2xl font-bold text-green-600">{stats.minted}</p>
           </div>
         </div>
 
-        {/* Filter Section - DISESUAIKAN DENGAN GAMBAR */}
+        {/* Filter Section */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-1">Cari (Nama/NIM/Certificate ID)</p>
+              <p className="text-sm font-medium text-gray-700 mb-1">Cari (Nama/NPM/Nomor Ijazah)</p>
               <input
                 type="text"
                 value={searchTerm}
@@ -617,9 +349,7 @@ export default function DataIjazahPage() {
               >
                 <option value="all">Semua Status</option>
                 <option value="pending">Pending</option>
-                <option value="verified">Verified</option>
                 <option value="minted">Minted</option>
-                <option value="rejected">Rejected</option>
               </select>
             </div>
             
@@ -633,33 +363,9 @@ export default function DataIjazahPage() {
               </button>
             </div>
           </div>
-          
-          {/* Debug Tools */}
-          <div className="mt-4 pt-3 border-t border-gray-200">
-            <div className="flex space-x-4">
-              <button 
-                onClick={() => window.open(`${API_BASE_URL}/api/diplomas`, '_blank')}
-                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-              >
-                Test API Endpoint
-              </button>
-              <button 
-                onClick={() => console.log('Current diplomas:', diplomas)}
-                className="text-sm text-gray-600 hover:text-gray-800 hover:underline"
-              >
-                Log Data State
-              </button>
-              <button 
-                onClick={fetchDiplomas}
-                className="text-sm text-gray-600 hover:text-gray-800 hover:underline"
-              >
-                Force Refresh
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Table */}
+        {/* Table - SESUAI GAMBAR: NO, NAMA, NPM, PRODI, TAHUN, STATUS, AKSI, DETAIL */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -669,25 +375,25 @@ export default function DataIjazahPage() {
                     NO
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    CERTIFICATE ID
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NAMA
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NPM
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    PROGRAM STUDI
+                    PRODI
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    TAHUN
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     STATUS
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    DETAIL
+                    AKSI
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    AKSI
+                    DETAIL
                   </th>
                 </tr>
               </thead>
@@ -745,13 +451,11 @@ export default function DataIjazahPage() {
                           {index + 1}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                            {diploma.certificate_id}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {diploma.nama_lengkap}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {diploma.certificate_id}
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -760,45 +464,37 @@ export default function DataIjazahPage() {
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {diploma.program_studi}
                         </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {diploma.tanggal_lulus ? new Date(diploma.tanggal_lulus).getFullYear() : '-'}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(diploma.status)}`}>
                             {getStatusLabel(diploma.status)}
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => toggleExpandRow(diploma.id)}
-                            className="text-blue-600 hover:text-blue-800 font-medium underline"
-                          >
-                            {expandedRow === diploma.id ? "Sembunyikan Detail" : "Lihat Detail"}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
                           <div className="flex flex-wrap gap-2">
-                            {diploma.status === 'verified' && (
-                              <button
-                                onClick={() => handleStartMint(diploma)}
-                                className="text-green-600 hover:text-green-800 font-medium text-sm"
-                              >
-                                Mint
-                              </button>
-                            )}
-                            
-                            {diploma.status !== 'minted' && (
+                            {diploma.status !== 'minted' ? (
                               <button
                                 onClick={() => handleDeleteDiploma(diploma.id, diploma.nama_lengkap, diploma.status)}
                                 className="text-red-600 hover:text-red-800 font-medium text-sm"
                               >
                                 Hapus
                               </button>
-                            )}
-                            
-                            {diploma.status === 'minted' && (
+                            ) : (
                               <span className="text-gray-400 text-xs px-2 py-1" title="Data sudah di-mint ke blockchain">
                                 Immutable
                               </span>
                             )}
                           </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => toggleExpandRow(diploma.id)}
+                            className="text-blue-600 hover:text-blue-800 font-medium underline"
+                          >
+                            {expandedRow === diploma.id ? "Sembunyikan" : "Lihat Detail"}
+                          </button>
                         </td>
                       </tr>
                       
@@ -929,18 +625,6 @@ export default function DataIjazahPage() {
                                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(diploma.status)}`}>
                                           {getStatusLabel(diploma.status)}
                                         </span>
-                                        {diploma.status === 'verified' ? (
-                                          <button
-                                            onClick={() => handleStartMint(diploma)}
-                                            className="text-sm text-green-600 hover:text-green-800 font-medium"
-                                          >
-                                            Mint SBT
-                                          </button>
-                                        ) : diploma.status === 'minted' ? (
-                                          <span className="text-sm text-gray-500">
-                                            (Immutable - tidak dapat diubah)
-                                          </span>
-                                        ) : null}
                                       </div>
                                     </div>
                                   </div>
@@ -948,31 +632,14 @@ export default function DataIjazahPage() {
                                 
                                 <div className="pt-4 border-t">
                                   <div className="flex space-x-3">
-                                    {diploma.status === 'verified' ? (
-                                      <>
-                                        <button
-                                          onClick={() => handleStartMint(diploma)}
-                                          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition font-medium text-sm"
-                                        >
-                                          Mint SBT
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteDiploma(diploma.id, diploma.nama_lengkap, diploma.status)}
-                                          className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
-                                        >
-                                          Hapus Data
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            navigator.clipboard.writeText(diploma.certificate_id);
-                                            alert('Certificate ID berhasil disalin!');
-                                          }}
-                                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition font-medium text-sm"
-                                        >
-                                          Salin ID
-                                        </button>
-                                      </>
-                                    ) : diploma.status === 'minted' ? (
+                                    {diploma.status !== 'minted' ? (
+                                      <button
+                                        onClick={() => handleDeleteDiploma(diploma.id, diploma.nama_lengkap, diploma.status)}
+                                        className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
+                                      >
+                                        Hapus Data
+                                      </button>
+                                    ) : (
                                       <div className="w-full">
                                         <div className="bg-gray-50 p-3 rounded border border-gray-200">
                                           <div className="flex items-start">
@@ -986,13 +653,6 @@ export default function DataIjazahPage() {
                                           </div>
                                         </div>
                                       </div>
-                                    ) : (
-                                      <button
-                                        onClick={() => handleDeleteDiploma(diploma.id, diploma.nama_lengkap, diploma.status)}
-                                        className="px-4 py-2 bg-red-50 text-red-700 rounded hover:bg-red-100 transition font-medium text-sm"
-                                      >
-                                        Hapus Data
-                                      </button>
                                     )}
                                   </div>
                                 </div>
@@ -1013,32 +673,18 @@ export default function DataIjazahPage() {
         <div className="text-center text-sm text-gray-600 mb-6">
           <p>Menampilkan {filteredDiplomas.length} dari {diplomas.length} ijazah</p>
         </div>
+
+        {/* Info Box */}
         <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
-          <h4 className="text-sm font-semibold text-gray-800 mb-2">Aturan Data Ijazah</h4>
+          <h4 className="text-sm font-semibold text-gray-800 mb-2">Informasi Data Ijazah</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
             <div className="flex items-start">
               <span className="text-yellow-500 mr-2">•</span>
-              <span><strong>Pending:</strong> Menunggu verifikasi admin</span>
-            </div>
-            <div className="flex items-start">
-              <span className="text-blue-500 mr-2">•</span>
-              <span><strong>Verified:</strong> Sudah diverifikasi, siap di-mint</span>
-            </div>
-            <div className="flex items-start">
-              <span className="text-green-500 mr-2">•</span>
-              <span><strong>Minted:</strong> Sudah di-mint ke blockchain</span>
-            </div>
-            <div className="flex items-start">
-              <span className="text-red-500 mr-2">•</span>
-              <span><strong>Rejected:</strong> Ditolak dengan catatan alasan</span>
+              <span><strong>Minted:</strong> Status ijazah yang sudah di-mint ke blockchain</span>
             </div>
             <div className="flex items-start col-span-1 md:col-span-2">
               <span className="text-red-500 mr-2">❌</span>
               <span><strong>Data Minted tidak dapat diubah/dihapus</strong></span>
-            </div>
-            <div className="flex items-start col-span-1 md:col-span-2">
-              <span className="text-green-500 mr-2">✅</span>
-              <span><strong>Hanya data Verified yang bisa di-mint</strong></span>
             </div>
             <div className="flex items-start col-span-1 md:col-span-2">
               <span className="text-gray-500 mr-2">•</span>

@@ -35,6 +35,25 @@ export default function AdminDashboard() {
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [ijazahData, setIjazahData] = useState<IjazahData[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // Tambahkan state untuk current time
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  // Effect untuk update waktu real-time
+  useEffect(() => {
+    // Update waktu setiap detik
+    const timeInterval = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }));
+    }, 1000);
+    
+    // Cleanup interval saat component unmount
+    return () => clearInterval(timeInterval);
+  }, []);
 
   // Fungsi untuk mengambil data dari database
   const fetchDashboardData = async () => {
@@ -283,11 +302,24 @@ export default function AdminDashboard() {
                 </>
               ) : 'Refresh Data'}
             </button>
-            {lastUpdated && (
-              <div className="text-xs text-gray-500">
-                Update: {lastUpdated}
+            
+            {/* Display real-time clock */}
+            <div className="flex items-center space-x-3">
+              {/* Last updated dari API */}
+              {lastUpdated && (
+                <div className="text-xs text-gray-500 border-r border-gray-300 pr-3">
+                </div>
+              )}
+              {/* Real-time clock */}
+              <div className="flex items-center space-x-1 bg-gray-100 px-3 py-1.5 rounded-lg">
+                <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xs font-medium text-gray-700">
+                 update: {currentTime || '--:--:--'}
+                </span>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -387,15 +419,6 @@ export default function AdminDashboard() {
       <div className="bg-white rounded-lg shadow-sm p-5 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-md font-semibold text-gray-800">Distribusi Ijazah</h3>
-          <div className="text-sm text-gray-500">
-            {stats.total > 0 ? (
-              <>
-                {stats.mintedPercentage}% Minted • {stats.pendingPercentage}% Pending
-              </>
-            ) : (
-              'Belum ada data'
-            )}
-          </div>
         </div>
         
         <div className="flex flex-col md:flex-row items-center">
@@ -512,10 +535,6 @@ export default function AdminDashboard() {
             onClick={fetchDashboardData}
             className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
           >
-            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
           </button>
         </div>
         
@@ -557,7 +576,7 @@ export default function AdminDashboard() {
                       {formatStatus(item.status)}
                     </span>
                     <span className="text-xs text-gray-500 mt-0.5">
-                      ID: {item.certificate_id}
+                      Nomor Ijazah: {item.certificate_id}
                     </span>
                   </div>
                 </div>

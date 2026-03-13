@@ -44,6 +44,18 @@ exports.uploadDiploma = async (req, res) => {
       });
     }
 
+    // ✅ CEK APAKAH CERTIFICATE ID SUDAH ADA
+    if (req.body.certificate_id) {
+      const existingCertId = await Diploma.findOne({ where: { certificate_id: req.body.certificate_id } });
+      if (existingCertId) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: 'Certificate ID sudah digunakan'
+        });
+      }
+    }
+
     // Format tanggal dari dd/mm/yyyy ke yyyy-mm-dd
     let tanggalLulus = req.body.tanggal_lulus;
     if (tanggalLulus && tanggalLulus.includes('/')) {
@@ -53,8 +65,20 @@ exports.uploadDiploma = async (req, res) => {
       }
     }
 
-    // Buat data diploma
+    // Format tanggal SK Rektor
+    let tanggalSKRektor = req.body.tanggal_sk_rektor;
+    if (tanggalSKRektor && tanggalSKRektor.includes('/')) {
+      const parts = tanggalSKRektor.split('/');
+      if (parts.length === 3) {
+        tanggalSKRektor = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+
+    // Buat data diploma - DENGAN CERTIFICATE_ID
     const diplomaData = {
+      // ✅ TAMBAHKAN CERTIFICATE_ID DARI REQUEST BODY
+      certificate_id: req.body.certificate_id,
+      
       nama_lengkap: req.body.nama_lengkap,
       npm: req.body.npm,
       nik: req.body.nik,
@@ -68,7 +92,7 @@ exports.uploadDiploma = async (req, res) => {
       tahun_akademik: req.body.tahun_akademik,
       yudisium: req.body.yudisium,
       nomor_sk_rektor: req.body.nomor_sk_rektor || null,
-      tanggal_sk_rektor: req.body.tanggal_sk_rektor || null,
+      tanggal_sk_rektor: tanggalSKRektor || null,
       wallet_address: req.body.wallet_address,
       nama_file: req.file.originalname,
       path_file: req.file.path,
@@ -79,8 +103,18 @@ exports.uploadDiploma = async (req, res) => {
       status: 'pending'
     };
 
+    // DEBUG: Log data yang akan disimpan
+    console.log('📝 Data yang akan disimpan:', {
+      certificate_id: diplomaData.certificate_id,
+      nama_lengkap: diplomaData.nama_lengkap,
+      npm: diplomaData.npm
+    });
+
     // Simpan ke database
     const diploma = await Diploma.create(diplomaData);
+
+    console.log('✅ Data berhasil disimpan dengan ID:', diploma.id);
+    console.log('✅ Certificate ID tersimpan:', diploma.certificate_id);
 
     res.status(201).json({
       success: true,
@@ -96,6 +130,8 @@ exports.uploadDiploma = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('❌ Error uploading diploma:', error);
+    
     // Hapus file jika ada error
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);

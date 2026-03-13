@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { diplomaAPI } from '@/app/services/api';
 
 interface FormData {
+  // Data Sistem (diletakkan di atas)
+  certificate_id: string;
+  uploaded_by: string;
+  
   // Data Mahasiswa
   nama_lengkap: string;
   npm: string;
@@ -28,10 +32,6 @@ interface FormData {
   
   // Upload File
   ijazah_file: File | null;
-  
-  // Data Sistem (auto-generated atau dari backend)
-  certificate_id: string;
-  uploaded_by: string;
 }
 
 export default function UploadIjazah() {
@@ -39,6 +39,9 @@ export default function UploadIjazah() {
   
   // Data kosong sebagai initial state
   const initialEmptyFormData: FormData = {
+    certificate_id: '',
+    uploaded_by: 'admin',
+    
     nama_lengkap: '',
     npm: '',
     nik: '',
@@ -57,10 +60,7 @@ export default function UploadIjazah() {
     
     wallet_address: '',
     
-    ijazah_file: null,
-    
-    certificate_id: '',
-    uploaded_by: 'admin'
+    ijazah_file: null
   };
 
   const [formData, setFormData] = useState<FormData>(initialEmptyFormData);
@@ -69,26 +69,6 @@ export default function UploadIjazah() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState('');
-  const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
-  const [certificateId, setCertificateId] = useState('');
-
-  // Generate certificate ID
-  useEffect(() => {
-    const generateCertificateId = () => {
-      setIsGeneratingCertificate(true);
-      // Format: UWD-YYYY-NNNNNN (6 digit random)
-      const year = new Date().getFullYear();
-      const randomNum = Math.floor(100000 + Math.random() * 900000); // 6 digit
-      const certId = `UWD-${year}-${randomNum}`;
-      setCertificateId(certId);
-      setFormData(prev => ({ ...prev, certificate_id: certId }));
-      setIsGeneratingCertificate(false);
-    };
-
-    if (!formData.certificate_id) {
-      generateCertificateId();
-    }
-  }, []);
 
   // Update tahun akademik saat tahun lulus berubah
   useEffect(() => {
@@ -102,11 +82,90 @@ export default function UploadIjazah() {
     }
   }, [formData.tanggal_lulus]);
 
+  // Update fakultas berdasarkan program studi yang dipilih
+  useEffect(() => {
+    if (formData.program_studi) {
+      let fakultas = '';
+      
+      if (['Informatika', 'Sistem Informasi', 'Bisnis Digital'].includes(formData.program_studi)) {
+        fakultas = 'Fakultas Teknologi Informasi (FTI)';
+      } else if (['Manajemen', 'Akuntansi'].includes(formData.program_studi)) {
+        fakultas = 'Fakultas Ekonomi dan Bisnis (FEB)';
+      } else if (['Bahasa dan Kebudayaan Inggris', 'Bahasa Mandarin'].includes(formData.program_studi)) {
+        fakultas = 'Fakultas Bahasa';
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        fakultas: fakultas
+      }));
+    } else {
+      // Reset fakultas jika program studi kosong
+      setFormData(prev => ({
+        ...prev,
+        fakultas: ''
+      }));
+    }
+  }, [formData.program_studi]);
+
+  // Update gelar akademik berdasarkan program studi yang dipilih
+  useEffect(() => {
+    if (formData.program_studi) {
+      let gelar = '';
+      
+      switch (formData.program_studi) {
+        case 'Manajemen':
+          gelar = 'Sarjana Manajemen (S.M.)';
+          break;
+        case 'Akuntansi':
+          gelar = 'Sarjana Akuntansi (S.Ak.)';
+          break;
+        case 'Informatika':
+          gelar = 'Sarjana Komputer (S.Kom.)';
+          break;
+        case 'Sistem Informasi':
+          gelar = 'Sarjana Sistem Informasi (S.SI.)';
+          break;
+        case 'Bisnis Digital':
+          gelar = 'Sarjana Bisnis Digital (S.BD.)';
+          break;
+        case 'Bahasa dan Kebudayaan Inggris':
+          gelar = 'Sarjana Sastra (S.S.)';
+          break;
+        case 'Bahasa Mandarin':
+          gelar = 'Sarjana Sastra (S.S.)';
+          break;
+        default:
+          gelar = '';
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        gelar_akademik: gelar
+      }));
+    } else {
+      // Reset gelar jika program studi kosong
+      setFormData(prev => ({
+        ...prev,
+        gelar_akademik: ''
+      }));
+    }
+  }, [formData.program_studi]);
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  // Fungsi khusus untuk Certificate ID (hanya angka)
+  const handleCertificateIdChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Hanya angka
+    setFormData(prev => ({
+      ...prev,
+      certificate_id: value
     }));
   };
 
@@ -160,10 +219,13 @@ export default function UploadIjazah() {
     try {
       // Validasi data wajib
       const requiredFields = [
+        'certificate_id', // Certificate ID wajib diisi
         'nama_lengkap',
         'npm',
         'nik',
         'program_studi',
+        'fakultas', // Fakultas wajib diisi (otomatis)
+        'gelar_akademik', // Gelar wajib diisi (otomatis)
         'tanggal_lulus',
         'nomor_sk_rektor',
         'wallet_address'
@@ -173,6 +235,13 @@ export default function UploadIjazah() {
       
       if (missingFields.length > 0) {
         setError(`Harap lengkapi semua field yang wajib diisi: ${missingFields.join(', ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Validasi format Certificate ID (hanya angka)
+      if (!/^\d+$/.test(formData.certificate_id)) {
+        setError('Certificate ID hanya boleh berisi angka!');
         setIsSubmitting(false);
         return;
       }
@@ -269,6 +338,9 @@ export default function UploadIjazah() {
         setError(err.response.data.error);
         if (err.response.data.error.includes('NPM sudah terdaftar')) {
           alert('❌ NPM sudah terdaftar dalam sistem!');
+        } else if (err.response.data.error.includes('certificate_id must be unique')) {
+          setError('Certificate ID sudah digunakan. Silakan gunakan ID lain.');
+          alert('❌ Certificate ID sudah digunakan!');
         }
       } else if (err.message.includes('Network Error')) {
         setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
@@ -284,18 +356,12 @@ export default function UploadIjazah() {
 
   // Fungsi untuk reset form ke kondisi awal (semua kosong)
   const resetForm = () => {
-    const year = new Date().getFullYear();
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    const newCertificateId = `UWD-${year}-${randomNum}`;
-    
     setFormData({
       ...initialEmptyFormData,
-      certificate_id: newCertificateId,
-      tahun_akademik: year.toString()
+      tahun_akademik: new Date().getFullYear().toString()
     });
     setFileName('');
     setFileSize('');
-    setCertificateId(newCertificateId);
     setError('');
     
     // Reset file input jika ada
@@ -326,42 +392,20 @@ export default function UploadIjazah() {
     }
   };
 
-  // Data untuk dropdown
+  // Data untuk dropdown sesuai Universitas Widya Dharma Pontianak
   const programStudiOptions = [
-    'Informatika',
-    'Sistem Informasi',
-    'Teknik Elektro',
-    'Teknik Industri',
-    'Manajemen',
-    'Akuntansi',
-    'Hukum',
-    'Psikologi',
-    'Kedokteran',
-    'Farmasi',
-    'Arsitektur',
-    'Teknik Sipil'
-  ];
-
-  const fakultasOptions = [
-    'Fakultas Teknologi Informasi',
-    'Fakultas Teknik',
-    'Fakultas Ekonomi dan Bisnis',
-    'Fakultas Hukum',
-    'Fakultas Psikologi',
-    'Fakultas Kedokteran',
-    'Fakultas Farmasi',
-    'Fakultas Arsitektur dan Desain'
-  ];
-
-  const gelarOptions = [
-    'Sarjana Komputer (S.Kom.)',
-    'Sarjana Teknik (S.T.)',
-    'Sarjana Ekonomi (S.E.)',
-    'Sarjana Hukum (S.H.)',
-    'Sarjana Psikologi (S.Psi.)',
-    'Sarjana Kedokteran (S.Ked.)',
-    'Sarjana Farmasi (S.Farm.)',
-    'Sarjana Arsitektur (S.Ars.)'
+    // Fakultas Ekonomi dan Bisnis (FEB)
+    { value: 'Manajemen', label: 'Manajemen (Konsentrasi: Pemasaran, SDM, Keuangan)' },
+    { value: 'Akuntansi', label: 'Akuntansi' },
+    
+    // Fakultas Teknologi Informasi (FTI)
+    { value: 'Informatika', label: 'Informatika' },
+    { value: 'Sistem Informasi', label: 'Sistem Informasi' },
+    { value: 'Bisnis Digital', label: 'Bisnis Digital' },
+    
+    // Fakultas Bahasa
+    { value: 'Bahasa dan Kebudayaan Inggris', label: 'Bahasa dan Kebudayaan Inggris' },
+    { value: 'Bahasa Mandarin', label: 'Bahasa Mandarin' }
   ];
 
   const yudisiumOptions = [
@@ -374,6 +418,7 @@ export default function UploadIjazah() {
   // Fungsi untuk mengecek apakah form masih kosong
   const isFormEmpty = () => {
     return (
+      formData.certificate_id === '' &&
       formData.nama_lengkap === '' &&
       formData.npm === '' &&
       formData.nik === '' &&
@@ -414,19 +459,11 @@ export default function UploadIjazah() {
               </p>
             </div>
             
-            {/* Notifikasi untuk admin - Dipindahkan ke samping kanan */}
-            <div className="md:max-w-xs p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            {/* Notifikasi untuk admin */}
               <div className="flex items-start">
                 <div className="mr-2 mt-0.5">
-                  <span className="text-blue-600 text-sm">ℹ️</span>
-                </div>
+ 
                 <div>
-                  <h4 className="font-medium text-blue-800 text-sm mb-1">Info Upload</h4>
-                  <ul className="text-xs text-blue-700 space-y-0.5">
-                    <li>• Certificate ID: {certificateId}</li>
-                    <li>• Status awal: <strong>pending</strong></li>
-                    <li>• Verifikasi fisik diperlukan</li>
-                  </ul>
                 </div>
               </div>
             </div>
@@ -451,6 +488,28 @@ export default function UploadIjazah() {
         {/* Form Container */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <form onSubmit={handleSubmit} className="p-8">
+            {/* SECTION 0: Data Sistem (Certificate ID) - DILETAKKAN DI PALING ATAS */}
+            <div className="mb-10 pb-8 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-100">
+                Nomor Ijazah <span className="text-sm font-normal text-gray-500">(Nomor Identitas Ijazah)</span>
+              </h2>
+              <div className="max-w-2xl">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nomor Ijazah <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="certificate_id"
+                  value={formData.certificate_id}
+                  onChange={handleCertificateIdChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition font-mono text-lg"
+                  placeholder="Nomor Ijazah Wajib diisi"
+                  required
+                  maxLength={50}
+                />
+              </div>
+            </div>
+
             {/* Section 1: Data Mahasiswa */}
             <div className="mb-10 pb-8 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-100">
@@ -521,7 +580,7 @@ export default function UploadIjazah() {
                     value={formData.tempat_tanggal_lahir}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="Contoh: Jakarta, 01 Januari 2000"
+                    placeholder="Contoh: Pontianak, 01 Januari 2000"
                     maxLength={100}
                   />
                 </div>
@@ -535,51 +594,54 @@ export default function UploadIjazah() {
                     name="program_studi"
                     value={formData.program_studi}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition appearance-none bg-white"
                     required
                   >
                     <option value="">Pilih Program Studi</option>
                     {programStudiOptions.map((prodi) => (
-                      <option key={prodi} value={prodi}>{prodi}</option>
+                      <option key={prodi.value} value={prodi.value}>
+                        {prodi.label}
+                      </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Fakultas */}
+                {/* Fakultas - Read Only, Otomatis Terisi */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fakultas
+                    Fakultas <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="fakultas"
                     value={formData.fakultas}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  >
-                    <option value="">Pilih Fakultas</option>
-                    {fakultasOptions.map((fakultas) => (
-                      <option key={fakultas} value={fakultas}>{fakultas}</option>
-                    ))}
-                  </select>
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+                    placeholder="Akan terisi otomatis dari program studi"
+                    readOnly
+                    disabled
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    <span className="text-blue-600">✓</span> Terisi otomatis berdasarkan program studi
+                  </p>
                 </div>
 
-                {/* Gelar Akademik */}
+                {/* Gelar Akademik - Read Only, Otomatis Terisi */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Gelar Akademik <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="gelar_akademik"
                     value={formData.gelar_akademik}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    required
-                  >
-                    <option value="">Pilih Gelar Akademik</option>
-                    {gelarOptions.map((gelar) => (
-                      <option key={gelar} value={gelar}>{gelar}</option>
-                    ))}
-                  </select>
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+                    placeholder="Akan terisi otomatis dari program studi"
+                    readOnly
+                    disabled
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    <span className="text-blue-600">✓</span> Terisi otomatis berdasarkan program studi
+                  </p>
                 </div>
               </div>
             </div>
@@ -616,8 +678,9 @@ export default function UploadIjazah() {
                     name="tahun_akademik"
                     value={formData.tahun_akademik}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
                     readOnly
+                    disabled
                   />
                   <p className="text-xs text-gray-500 mt-1">Auto-generated dari tanggal lulus</p>
                 </div>
@@ -681,7 +744,7 @@ export default function UploadIjazah() {
                     name="yudisium"
                     value={formData.yudisium}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition appearance-none bg-white"
                   >
                     <option value="">Pilih Yudisium</option>
                     {yudisiumOptions.map((yudisium) => (
@@ -716,7 +779,7 @@ export default function UploadIjazah() {
               </h2>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Alamat Wallet Penerima SBT <span className="text-red-500">*</span>
+                  Alamat Wallet Penerima <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -730,7 +793,7 @@ export default function UploadIjazah() {
                   maxLength={42}
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Alamat wallet Ethereum (0x diikuti 40 karakter hex). Wallet ini akan menerima Soulbound Token ijazah.
+                  Pastikan alamat wallet benar dan valid. Alamat ini akan menerima SBT setelah proses minting.
                 </p>
               </div>
             </div>
@@ -803,34 +866,12 @@ export default function UploadIjazah() {
               </div>
             </div>
 
-            {/* Section 5: Data Sistem */}
+            {/* Section 5: Data Sistem Lainnya */}
             <div className="mb-10">
               <h2 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-100">
                 Data Sistem
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Certificate ID */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Certificate ID
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="certificate_id"
-                      value={formData.certificate_id}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 font-mono"
-                      readOnly
-                    />
-                    {isGeneratingCertificate && (
-                      <div className="absolute right-3 top-3">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">ID unik untuk ijazah (auto-generated)</p>
-                </div>
-
                 {/* Uploader Info */}
                 <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <div className="flex items-center">
@@ -862,15 +903,6 @@ export default function UploadIjazah() {
                 >
                   <span className="mr-2">👁️</span>
                   {showPreview ? 'Sembunyikan Preview' : 'Lihat Preview Data'}
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => router.push('/admin/data-ijazah')}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center"
-                >
-                  <span className="mr-2">📋</span>
-                  Lihat Data Ijazah
                 </button>
               </div>
               
@@ -932,7 +964,7 @@ export default function UploadIjazah() {
                     ✕
                   </button>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">Certificate ID: {formData.certificate_id}</p>
+                <p className="text-sm text-gray-500 mt-1">Certificate ID: {formData.certificate_id || '(belum diisi)'}</p>
               </div>
               
               <div className="p-6">
@@ -945,7 +977,7 @@ export default function UploadIjazah() {
                 ) : (
                   <>
                     <div className="space-y-6">
-                      {/* Certificate ID Banner */}
+                      {/* Certificate ID Banner - Paling Atas di Preview */}
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-center">
                           <div className="mr-3">
@@ -953,7 +985,9 @@ export default function UploadIjazah() {
                           </div>
                           <div>
                             <p className="text-sm text-gray-500">Certificate ID</p>
-                            <p className="font-mono font-bold text-blue-700">{formData.certificate_id}</p>
+                            <p className="font-mono font-bold text-blue-700 text-lg">
+                              {formData.certificate_id || <span className="text-yellow-600">Belum diisi</span>}
+                            </p>
                           </div>
                         </div>
                       </div>

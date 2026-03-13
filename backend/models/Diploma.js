@@ -280,12 +280,8 @@ module.exports = (sequelize, DataTypes) => {
     
     hooks: {
       beforeCreate: (diploma, options) => {
-        // Generate certificate ID otomatis
-        if (!diploma.certificate_id) {
-          const year = new Date().getFullYear();
-          const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-          diploma.certificate_id = `DIP-${year}-${random}`;
-        }
+        // HAPUS block kode yang menggenerate certificate_id otomatis
+        // Biarkan certificate_id sesuai input dari user
         
         // Format tanggal jika perlu
         if (diploma.tanggal_lulus && typeof diploma.tanggal_lulus === 'string') {

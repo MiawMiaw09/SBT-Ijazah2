@@ -311,27 +311,24 @@ export default function VerificationPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Input Certificate ID</h2>
-              <p className="text-gray-600 text-sm">Masukkan Certificate ID untuk memverifikasi ijazah</p>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Input Nomor Ijazah</h2>
+              <p className="text-gray-600 text-sm">Masukkan Nomor Ijazah untuk memverifikasi ijazah</p>
             </div>
 
             <form onSubmit={handleVerification} className="space-y-4">
               <div>
                 <label htmlFor="certificateId" className="block text-sm font-medium text-gray-700 mb-2">
-                  Certificate ID Ijazah
+                  Nomor Ijazah
                 </label>
                 <input
                   type="text"
                   id="certificateId"
                   value={certificateId}
                   onChange={(e) => setCertificateId(e.target.value)}
-                  placeholder="Contoh: UWD-2024-00123"
+                  placeholder="Pastikan Nomor Ijazah di Input dengan benar"
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition duration-300 text-base"
                   disabled={isLoading}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Certificate ID dapat ditemukan pada bagian bawah ijazah fisik/digital
-                </p>
               </div>
               <button
                 type="submit"
@@ -367,7 +364,7 @@ export default function VerificationPage() {
                   <ul className="text-blue-700 text-xs space-y-1">
                     <li className="flex items-center">
                       <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
-                      Masukkan Certificate ID yang tertera pada ijazah
+                      Masukkan Nomor Ijazah yang tertera pada ijazah
                     </li>
                     <li className="flex items-center">
                       <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
@@ -401,14 +398,14 @@ export default function VerificationPage() {
                 <div className="space-y-3 max-w-md mx-auto">
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-sm text-gray-700 mb-1">
-                      <strong>Certificate ID yang dicari:</strong>
+                      <strong>Nomor Ijazah yang dicari:</strong>
                     </p>
                     <p className="font-mono text-base bg-gray-100 p-2 rounded">
                       {certificateId}
                     </p>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Pastikan Certificate ID yang dimasukkan benar. Certificate ID biasanya tercetak pada bagian bawah ijazah.
+                    Pastikan Nomor Ijazah yang dimasukkan benar. Nomor Ijazah biasanya tercetak pada bagian bawah ijazah.
                   </p>
                   <button
                     onClick={resetVerification}
@@ -853,10 +850,7 @@ export default function VerificationPage() {
             <div className="mt-4 text-xs text-gray-400">
               <p>Status Ijazah:</p>
               <div className="flex justify-center space-x-2 mt-1">
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Pending</span>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Verified</span>
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded">Minted</span>
-                <span className="px-2 py-1 bg-red-100 text-red-800 rounded">Rejected</span>
+                <span className="px-2 py-1 bg-yellow-100 text-gray-800 rounded">Ijazah yang tertera merupakan ijazah yang sudah terverifikasi dan terupload ke blockchain</span>
               </div>
             </div>
           </div>

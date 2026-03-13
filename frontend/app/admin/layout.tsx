@@ -89,16 +89,6 @@ export default function AdminLayout({
               <h2 className="text-xl font-semibold text-gray-800">Admin Dashboard</h2>
               <p className="text-gray-600 text-sm">Sistem Manajemen Ijazah Digital</p>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="font-medium text-gray-800">Admin User</p>
-                <p className="text-sm text-gray-600">Administrator</p>
-              </div>
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                A
-              </div>
-            </div>
           </div>
         </header>
 
