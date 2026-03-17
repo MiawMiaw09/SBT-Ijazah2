@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { diplomaAPI, Diploma, MintData } from '@/app/services/api';
 import MintPopup from '../../components/MintPopup';
@@ -11,7 +11,7 @@ interface PopupDiplomaData {
   id: number;
   namaMahasiswa: string;
   npm: string;
-  nik: String;
+  nik: string;
   programStudi: string;
   fakultas?: string;
   gelarAkademik: string;
@@ -25,6 +25,7 @@ interface PopupDiplomaData {
   certificateId: string;
   status: 'Pending' | 'Minted';
   selected: boolean;
+  ipk?: number; // IPK dari database
 }
 
 // Interface untuk Diploma dengan selected property
@@ -48,7 +49,9 @@ export default function MintSbtPage() {
     isUploading: false,
     uploadProgress: 0,
     isMinting: false,
-    estimatedGas: '0.01'
+    estimatedGas: '0.01',
+    txHash: undefined as string | undefined,
+    error: undefined as string | undefined
   });
 
   // Base API URL
@@ -263,11 +266,11 @@ export default function MintSbtPage() {
       id: diploma.id,
       namaMahasiswa: diploma.nama_lengkap,
       npm: diploma.npm,
-      nik: diploma.nik,
+      nik: diploma.nik || '',
       programStudi: diploma.program_studi,
       fakultas: diploma.fakultas || '',
       gelarAkademik: diploma.gelar_akademik,
-      tempattanggallahir: diploma.tempat_tanggal_lahir,
+      tempattanggallahir: diploma.tempat_tanggal_lahir || '',
       tanggalKelulusan: diploma.tanggal_lulus,
       tahunLulus: diploma.tanggal_lulus ? new Date(diploma.tanggal_lulus).getFullYear().toString() : '',
       walletAddress: diploma.wallet_address || '',
@@ -276,7 +279,8 @@ export default function MintSbtPage() {
       tokenID: diploma.token_id || `SBT-${Date.now().toString().slice(-6)}`,
       certificateId: diploma.certificate_id,
       status: diploma.status === 'minted' ? 'Minted' : 'Pending',
-      selected: diploma.selected
+      selected: diploma.selected,
+      ipk: diploma.ipk || 0
     };
   };
 
@@ -295,73 +299,172 @@ export default function MintSbtPage() {
       isUploading: false,
       uploadProgress: 0,
       isMinting: false,
-      estimatedGas: '0.01'
+      estimatedGas: '0.01',
+      txHash: undefined,
+      error: undefined
     });
   };
 
-  // Handle upload ke IPFS (step 1) - Versi sederhana tanpa simulasi
+  // Handle upload ke IPFS (step 1) - VERSI NYATA
   const handleUploadToIPFS = async () => {
     if (!currentMintingItem) return;
     
-    setMintProgress(prev => ({ ...prev, isUploading: true, uploadProgress: 0 }));
-    
-    // Simulasi upload progress
-    await new Promise(resolve => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setMintProgress(prev => ({ ...prev, uploadProgress: progress }));
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          resolve(true);
-        }
-      }, 100);
-    });
-    
-    setMintProgress(prev => ({ ...prev, isUploading: false }));
-    setMintStep('blockchain_mint');
+    setMintProgress(prev => ({ 
+      ...prev, 
+      isUploading: true, 
+      uploadProgress: 0,
+      error: undefined 
+    }));
+
+    try {
+      // Dapatkan estimasi gas
+      const estimatedGas = await diplomaAPI.getEstimatedGas();
+      setMintProgress(prev => ({ ...prev, estimatedGas }));
+
+      // Siapkan data untuk IPFS (sesuai format smart contract)
+      const ipfsData = {
+        namaLengkap: currentMintingItem.namaMahasiswa,
+        npm: currentMintingItem.npm,
+        programStudi: currentMintingItem.programStudi,
+        tanggalLulus: currentMintingItem.tanggalKelulusan,
+        ipk: currentMintingItem.ipk || 0,
+        nomorIjazah: currentMintingItem.certificateId,
+        institusi: 'Universitas Anda', // Ganti dengan nama institusi
+        tanggalTerbit: Math.floor(Date.now() / 1000), // Unix timestamp
+        // Data tambahan
+        nik: currentMintingItem.nik || '',
+        gelarAkademik: currentMintingItem.gelarAkademik,
+        fakultas: currentMintingItem.fakultas || ''
+      };
+
+      // Progress simulasi (karena upload ke IPFS via backend)
+      const progressInterval = setInterval(() => {
+        setMintProgress(prev => ({
+          ...prev,
+          uploadProgress: Math.min(prev.uploadProgress + 10, 90)
+        }));
+      }, 200);
+
+      // Upload ke IPFS via backend
+      const uploadResult = await diplomaAPI.uploadToIPFS(currentMintingItem.id, ipfsData);
+      
+      clearInterval(progressInterval);
+
+      if (uploadResult.success && uploadResult.data) {
+        // Update progress ke 100%
+        setMintProgress(prev => ({ 
+          ...prev, 
+          isUploading: false, 
+          uploadProgress: 100 
+        }));
+
+        // Update currentMintingItem dengan IPFS hash
+        setCurrentMintingItem(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            ipfs: uploadResult.data!.ipfsHash
+          };
+        });
+
+        // Lanjut ke step blockchain mint setelah 1 detik
+        setTimeout(() => {
+          setMintStep('blockchain_mint');
+        }, 1000);
+      } else {
+        throw new Error(uploadResult.message || 'Gagal upload ke IPFS');
+      }
+    } catch (error: any) {
+      console.error('Upload to IPFS failed:', error);
+      setMintProgress(prev => ({ 
+        ...prev, 
+        isUploading: false,
+        error: error.message || 'Gagal upload ke IPFS'
+      }));
+      alert(`❌ Gagal upload ke IPFS: ${error.message}`);
+    }
   };
 
-  // Handle mint ke blockchain (step 2) - VERSI SEDERHANA: LANGSUNG MINT
+  // Handle mint ke blockchain (step 2) - VERSI NYATA
   const handleMintToBlockchain = async () => {
     if (!currentMintingItem) return;
 
-    setMintProgress(prev => ({ ...prev, isMinting: true }));
+    setMintProgress(prev => ({ 
+      ...prev, 
+      isMinting: true,
+      error: undefined 
+    }));
 
     try {
-      // Skip blockchain upload temporarily
-      const mintData: MintData = {
-        transaction_hash: 'SKIPPED',
-        contract_address: 'SKIPPED',
-        token_id: `TEMP-${Date.now()}`,
-        block_number: 0,
-        minted_by: 'admin'
-      };
-
-      // API call untuk update mint status
-      const response = await diplomaAPI.mintDiploma(currentMintingItem.id, mintData);
-
-      console.log('MintDiploma API Response:', response);
-
-      if (response.success) {
-        // Update local state - HAPUS dari tabel MintSbtPage
-        setDiplomas(prev => 
-          prev.filter(item => item.id !== currentMintingItem.id)
-        );
-
-        setMintProgress(prev => ({ ...prev, isMinting: false }));
-        setMintStep('success');
-
-        alert(`✅ Ijazah berhasil di-mint!\nData akan hilang dari halaman ini dan status berubah menjadi \"Minted\" di Data Ijazah.`);
-      } else {
-        console.error('MintDiploma API failed:', response);
-        alert('❌ Gagal melakukan minting. Coba lagi nanti.');
+      // Pastikan IPFS hash sudah ada
+      if (!currentMintingItem.ipfs) {
+        throw new Error('IPFS hash tidak ditemukan. Silakan upload ke IPFS terlebih dahulu.');
       }
-    } catch (error) {
+
+      // Mint ke blockchain via backend
+      const mintResult = await diplomaAPI.mintToBlockchain(
+        currentMintingItem.id,
+        currentMintingItem.ipfs,
+        currentMintingItem.walletAddress
+      );
+
+      if (mintResult.success && mintResult.data) {
+        // Update mintProgress dengan tx hash
+        setMintProgress(prev => ({ 
+          ...prev, 
+          isMinting: false,
+          txHash: mintResult.data!.transactionHash
+        }));
+
+        // Update currentMintingItem dengan token ID
+        setCurrentMintingItem(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            tokenID: mintResult.data!.tokenId
+          };
+        });
+
+        // Data untuk update ke database (via API yang sudah ada)
+        const mintData: MintData = {
+          transaction_hash: mintResult.data.transactionHash,
+          contract_address: mintResult.data.contractAddress,
+          token_id: mintResult.data.tokenId,
+          block_number: mintResult.data.blockNumber,
+          minted_by: 'admin'
+        };
+
+        // Update status di database
+        const updateResponse = await diplomaAPI.mintDiploma(currentMintingItem.id, mintData);
+
+        if (updateResponse.success) {
+          // Hapus dari tabel (karena sudah di-mint)
+          setDiplomas(prev => 
+            prev.filter(item => item.id !== currentMintingItem.id)
+          );
+
+          // Tampilkan success
+          setMintStep('success');
+        } else {
+          // Tetap tampilkan success meskipun update database gagal
+          // karena transaksi blockchain sudah berhasil
+          console.warn('Database update failed but blockchain mint succeeded');
+          setDiplomas(prev => 
+            prev.filter(item => item.id !== currentMintingItem.id)
+          );
+          setMintStep('success');
+        }
+      } else {
+        throw new Error(mintResult.message || 'Gagal mint ke blockchain');
+      }
+    } catch (error: any) {
       console.error('Minting failed:', error);
-      setMintProgress(prev => ({ ...prev, isMinting: false }));
-      alert('❌ Gagal melakukan minting. Coba lagi nanti.');
+      setMintProgress(prev => ({ 
+        ...prev, 
+        isMinting: false,
+        error: error.message || 'Gagal mint ke blockchain'
+      }));
+      alert(`❌ Gagal minting: ${error.message}`);
     }
   };
 
@@ -506,7 +609,7 @@ export default function MintSbtPage() {
         />
       )}
 
-      {/* Konten Utama */}
+      {/* Konten Utama - Sisa kode Anda tetap sama */}
       <div className="container mx-auto px-4 py-6">
         {/* Header - DISESUAIKAN DENGAN DATA IJAZAH */}
         <div className="mb-8">
@@ -707,9 +810,8 @@ export default function MintSbtPage() {
                   </tr>
                 ) : (
                   diplomas.map((item, index) => (
-                    <>
+                    <React.Fragment key={item.id}>
                       <tr 
-                        key={item.id}
                         className={`hover:bg-gray-50 transition duration-150 ${
                           item.selected ? 'bg-blue-50' : ''
                         }`}
@@ -953,7 +1055,7 @@ export default function MintSbtPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))
                 )}
               </tbody>

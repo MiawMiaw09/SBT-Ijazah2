@@ -38,6 +38,24 @@ router.get('/certificate/:certificateId', diplomaController.getDiplomaByCertific
 // @desc    Mark ijazah sebagai minted (SBT)
 router.put('/mint/:id', diplomaController.mintDiploma);
 
+// ========== BLOCKCHAIN & IPFS ROUTES ==========
+
+// @route   POST /api/diplomas/:id/upload-ipfs
+// @desc    Upload diploma data ke IPFS
+router.post('/:id/upload-ipfs', diplomaController.uploadToIPFS);
+
+// @route   POST /api/diplomas/:id/mint-blockchain
+// @desc    Mint SBT ke blockchain
+router.post('/:id/mint-blockchain', diplomaController.mintToBlockchain);
+
+// @route   GET /api/diplomas/estimate-gas
+// @desc    Estimasi gas fee untuk minting
+router.get('/estimate-gas', diplomaController.estimateGas);
+
+// @route   GET /api/diplomas/blockchain-status
+// @desc    Cek status koneksi blockchain
+router.get('/blockchain-status', diplomaController.checkBlockchainStatus);
+
 // ========== STATISTICS ROUTES ==========
 
 // @route   GET /api/diplomas/stats/dashboard

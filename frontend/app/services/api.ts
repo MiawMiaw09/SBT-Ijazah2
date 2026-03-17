@@ -48,7 +48,31 @@ export interface Diploma {
   tanggal_sk_rektor?: string;
 }
 
-// Interface baru untuk dashboard stats dengan data lengkap
+// Tambahkan interface untuk response blockchain
+export interface MintBlockchainResponse {
+  success: boolean;
+  data?: {
+    tokenId: string;
+    transactionHash: string;
+    blockNumber: number;
+    contractAddress: string;
+  };
+  message?: string;
+  error?: string;
+}
+
+export interface IPFSUploadResponse {
+  success: boolean;
+  data?: {
+    ipfsHash: string;
+    ipfsUrl: string;
+    fileName: string;
+  };
+  message?: string;
+  error?: string;
+}
+
+// Interface untuk dashboard stats dengan data lengkap
 export interface DashboardStats {
   total: number;
   pending: number;
@@ -287,6 +311,82 @@ export const diplomaAPI = {
   mintDiploma: async (id: number, mintData: MintData): Promise<ApiResponse> => {
     console.log(`🪙 [API] Minting diploma ID: ${id}`, mintData);
     return apiRequest(`/diplomas/mint/${id}`, 'PUT', mintData);
+  },
+
+  // Upload ke IPFS via backend
+  uploadToIPFS: async (diplomaId: number, diplomaData: any): Promise<IPFSUploadResponse> => {
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      
+      const response = await fetch(`${API_BASE_URL}/api/diplomas/${diplomaId}/upload-ipfs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ diplomaData }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to upload to IPFS');
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Upload to IPFS error:', error);
+      return {
+        success: false,
+        message: error.message || 'Gagal upload ke IPFS',
+        error: error.toString()
+      };
+    }
+  },
+
+  // Mint ke blockchain via backend
+  mintToBlockchain: async (diplomaId: number, ipfsHash: string, walletAddress?: string): Promise<MintBlockchainResponse> => {
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      
+      const response = await fetch(`${API_BASE_URL}/api/diplomas/${diplomaId}/mint-blockchain`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          ipfsHash,
+          walletAddress: walletAddress || '' // Bisa dikosongi, backend akan pakai default
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to mint to blockchain');
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Mint to blockchain error:', error);
+      return {
+        success: false,
+        message: error.message || 'Gagal mint ke blockchain',
+        error: error.toString()
+      };
+    }
+  },
+
+  // Get estimated gas
+  getEstimatedGas: async (): Promise<string> => {
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      
+      const response = await fetch(`${API_BASE_URL}/api/diplomas/estimate-gas`);
+      const data = await response.json();
+      
+      return data.estimatedGas || '0.01';
+    } catch (error) {
+      console.error('Error getting estimated gas:', error);
+      return '0.01';
+    }
   },
 
   // Statistik dashboard - LEGACY (untuk kompatibilitas)

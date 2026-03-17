@@ -4,6 +4,10 @@ const { generateFileHash } = require('../middleware/uploadMiddleware');
 const fs = require('fs');
 const path = require('path');
 
+// Import services baru
+const blockchainService = require('../services/blockchainService');
+const pinataService = require('../services/pinataService');
+
 // ========== FUNGSI UTAMA ==========
 
 // @desc    Upload ijazah baru
@@ -484,7 +488,7 @@ exports.deleteDiploma = async (req, res) => {
       });
     }
 
-    console.log(`📋 Diploma found: ${diploma.nama_lengkap} (${diploma.nim}), Status: ${diploma.status}`);
+    console.log(`📋 Diploma found: ${diploma.nama_lengkap} (${diploma.npm}), Status: ${diploma.status}`);
 
     // Cek status, jangan izinkan hapus jika sudah di-mint
     if (diploma.status === 'minted') {
@@ -619,7 +623,7 @@ exports.softDeleteDiploma = async (req, res) => {
       data: {
         id: diploma.id,
         nama_lengkap: diploma.nama_lengkap,
-        nim: diploma.nim,
+        npm: diploma.npm,
         status: diploma.status,
         verification_notes: diploma.verification_notes,
         updated_at: diploma.updated_at
@@ -691,6 +695,209 @@ exports.healthCheck = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'API health check failed',
+      error: error.message
+    });
+  }
+};
+
+// ========== FUNGSI BARU UNTUK MINTING OTOMATIS ==========
+
+// @desc    Upload ke IPFS via Pinata
+// @route   POST /api/diplomas/:id/upload-ipfs
+// @access  Private/Admin
+exports.uploadToIPFS = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { diplomaData } = req.body;
+
+    // Cek apakah diploma ada
+    const diploma = await Diploma.findByPk(id);
+    if (!diploma) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ijazah tidak ditemukan'
+      });
+    }
+
+    // Cek apakah sudah pernah diupload ke IPFS
+   // if (diploma.file_hash && diploma.file_hash.length > 0) {
+     // return res.status(400).json({
+       // success: false,
+        //message: 'Data sudah pernah diupload ke IPFS',
+        //data: { ipfsHash: diploma.file_hash }
+      //});
+   // }
+
+    console.log('📤 Uploading diploma to IPFS:', diploma.nama_lengkap);
+
+    // Upload ke IPFS via Pinata
+    const uploadResult = await pinataService.uploadJSON(
+      diplomaData,
+      `diploma-${diploma.certificate_id}.json`
+    );
+
+    if (!uploadResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Gagal upload ke IPFS',
+        error: uploadResult.error
+      });
+    }
+
+    // Simpan IPFS hash ke database (gunakan field ipfs_hash, bukan file_hash)
+    await diploma.update({
+      ipfs_hash: uploadResult.ipfsHash,
+      ipfs_url: uploadResult.ipfsUrl
+    });
+
+    res.json({
+      success: true,
+      message: 'Berhasil upload ke IPFS',
+      data: {
+        id: diploma.id,
+        certificate_id: diploma.certificate_id,
+        ipfsHash: uploadResult.ipfsHash,
+        ipfsUrl: uploadResult.ipfsUrl,
+        pinataUrl: uploadResult.pinataUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Upload to IPFS error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading to IPFS',
+      error: process.env.NODE_ENV === 'development' ? error.message : {}
+    });
+  }
+};
+
+// @desc    Mint ke blockchain via Polygon Amoy
+// @route   POST /api/diplomas/:id/mint-blockchain
+// @access  Private/Admin
+exports.mintToBlockchain = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ipfsHash, walletAddress } = req.body;
+
+    // Cek apakah diploma ada
+    const diploma = await Diploma.findByPk(id);
+    if (!diploma) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ijazah tidak ditemukan'
+      });
+    }
+
+    // Cek apakah sudah pernah di-mint
+    if (diploma.status === 'minted') {
+      return res.status(400).json({
+        success: false,
+        message: 'Ijazah sudah pernah di-mint'
+      });
+    }
+
+    // Cek IPFS hash (gunakan field ipfs_hash)
+    if (!ipfsHash && !diploma.ipfs_hash) {
+      return res.status(400).json({
+        success: false,
+        message: 'IPFS hash tidak ditemukan. Upload ke IPFS terlebih dahulu.'
+      });
+    }
+
+    const finalIpfsHash = ipfsHash || diploma.ipfs_hash;
+
+    // Tentukan recipient address (default ke admin wallet jika tidak ada)
+    const recipientAddress = walletAddress || diploma.wallet_address || process.env.DEFAULT_WALLET;
+    
+    if (!recipientAddress) {
+      return res.status(400).json({
+        success: false,
+        message: 'Wallet address tidak ditemukan'
+      });
+    }
+
+    console.log(`🔗 Minting to blockchain for ${diploma.nama_lengkap}...`);
+
+    // Panggil blockchain service untuk mint
+    const mintResult = await blockchainService.mintSBT(
+      recipientAddress,
+      finalIpfsHash,
+      diploma.certificate_id
+    );
+
+    if (!mintResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Gagal mint ke blockchain',
+        error: mintResult.error
+      });
+    }
+
+    // Update status di database (status akan diupdate lewat endpoint terpisah)
+    // Kita hanya return hasil minting, update status dilakukan di endpoint /mint/:id
+
+    res.json({
+      success: true,
+      message: 'Berhasil mint ke blockchain',
+      data: {
+        tokenId: mintResult.tokenId,
+        transactionHash: mintResult.transactionHash,
+        blockNumber: mintResult.blockNumber,
+        contractAddress: mintResult.contractAddress,
+        gasUsed: mintResult.gasUsed
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Mint to blockchain error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error minting to blockchain',
+      error: process.env.NODE_ENV === 'development' ? error.message : {}
+    });
+  }
+};
+
+// @desc    Estimasi gas fee
+// @route   GET /api/diplomas/estimate-gas
+// @access  Public
+exports.estimateGas = async (req, res) => {
+  try {
+    const testAddress = '0x0000000000000000000000000000000000000000';
+    const testIpfsHash = 'QmTest123456789';
+    
+    const estimate = await blockchainService.estimateGas(testAddress, testIpfsHash);
+    
+    res.json({
+      success: true,
+      estimatedGas: estimate.success ? estimate.totalCost : '0.01',
+      details: estimate
+    });
+  } catch (error) {
+    console.error('❌ Gas estimation error:', error);
+    res.json({
+      success: true,
+      estimatedGas: '0.01'
+    });
+  }
+};
+
+// @desc    Cek koneksi blockchain
+// @route   GET /api/diplomas/blockchain-status
+// @access  Public
+exports.checkBlockchainStatus = async (req, res) => {
+  try {
+    const status = await blockchainService.checkConnection();
+    
+    res.json({
+      success: status.success,
+      data: status
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      message: 'Blockchain not connected',
       error: error.message
     });
   }

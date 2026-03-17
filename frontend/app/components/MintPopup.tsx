@@ -1,15 +1,17 @@
 "use client";
 
 import { MintStep } from '../types/ijazah';
+import { diplomaAPI } from '../services/api';
 
-// Interface yang sesuai dengan API Diploma
 interface PopupDiplomaData {
   id: number;
   namaMahasiswa: string;
   npm: string;
+  nik: string;
   programStudi: string;
   fakultas?: string;
   gelarAkademik: string;
+  tempattanggallahir: string;
   tanggalKelulusan: string;
   tahunLulus: string;
   walletAddress?: string;
@@ -19,6 +21,7 @@ interface PopupDiplomaData {
   certificateId: string;
   status: 'Pending' | 'Minted';
   selected: boolean;
+  ipk?: number;
 }
 
 interface MintPopupProps {
@@ -29,6 +32,8 @@ interface MintPopupProps {
     uploadProgress: number;
     isMinting: boolean;
     estimatedGas: string;
+    txHash?: string;
+    error?: string;
   };
   onUploadToIPFS: () => Promise<void>;
   onMintToBlockchain: () => Promise<void>;
@@ -43,7 +48,6 @@ export default function MintPopup({
   onMintToBlockchain,
   onClose
 }: MintPopupProps) {
-  // Validate currentMintingItem
   if (!currentMintingItem) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -61,6 +65,12 @@ export default function MintPopup({
     );
   }
 
+  // Fungsi untuk membuka explorer blockchain
+  const openBlockExplorer = (txHash: string) => {
+    const network = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? '' : 'mumbai.';
+    window.open(`https://${network}polygonscan.com/tx/${txHash}`, '_blank');
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -70,7 +80,7 @@ export default function MintPopup({
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-800">
-                📤 Upload ke IPFS (Simulasi)
+                📤 Upload ke IPFS
               </h3>
               <button
                 onClick={onClose}
@@ -83,30 +93,30 @@ export default function MintPopup({
             <div className="mb-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center">
-                  <div className="text-blue-600 mr-3">💡</div>
+                  <div className="text-blue-600 mr-3">ℹ️</div>
                   <div>
-                    <p className="font-medium text-blue-800">Mode Sandbox</p>
-                    <p className="text-sm text-blue-600 mt-1">Ini hanya simulasi. Tidak ada upload ke IPFS nyata.</p>
+                    <p className="font-medium text-blue-800">Upload ke IPFS</p>
+                    <p className="text-sm text-blue-600 mt-1">Mengupload data ijazah ke IPFS via Pinata</p>
                   </div>
                 </div>
               </div>
               
               <p className="text-gray-600 mb-4">
-                Simulasi upload ijazah <strong>{currentMintingItem.namaMahasiswa || 'Nama tidak tersedia'}</strong> ke IPFS...
+                Upload ijazah <strong>{currentMintingItem.namaMahasiswa}</strong> ke IPFS...
               </p>
               
               {!mintProgress.isUploading ? (
                 <div className="text-center py-4">
-                  <div className="text-4xl mb-4">🚀</div>
-                  <p className="text-gray-600 mb-2">Siap untuk simulasi upload</p>
+                  <div className="text-4xl mb-4">📄</div>
+                  <p className="text-gray-600 mb-2">Siap untuk upload ke IPFS</p>
                   <p className="text-sm text-gray-500 mb-6">
-                    Klik tombol untuk mulai simulasi proses
+                    Data akan diupload ke IPFS dan mendapatkan CID
                   </p>
                   <button
                     onClick={onUploadToIPFS}
                     className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                   >
-                    Mulai Simulasi Upload
+                    Upload ke IPFS
                   </button>
                 </div>
               ) : (
@@ -115,7 +125,7 @@ export default function MintPopup({
                     <div className="flex mb-2 items-center justify-between">
                       <div>
                         <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
-                          Simulating...
+                          Uploading...
                         </span>
                       </div>
                       <div className="text-right">
@@ -133,20 +143,22 @@ export default function MintPopup({
                   </div>
                   
                   <div className="text-center text-sm text-gray-500">
-                    <p>⏳ Simulasi upload ke IPFS...</p>
-                    <p className="mt-1">Mode sandbox - tidak ada data nyata yang diupload</p>
+                    <p>⏳ Mengupload ke IPFS via Pinata...</p>
+                    {mintProgress.error && (
+                      <p className="text-red-500 mt-2">{mintProgress.error}</p>
+                    )}
                   </div>
                 </div>
               )}
             </div>
             
             <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-              <p className="font-medium mb-1">📝 Informasi Simulasi:</p>
+              <p className="font-medium mb-1">📝 Informasi Upload:</p>
               <ul className="list-disc ml-4 space-y-1">
-                <li>Proses ini hanya simulasi (sandbox mode)</li>
-                <li>CID yang dihasilkan adalah dummy/random</li>
-                <li>Tidak ada biaya atau upload nyata</li>
-                <li>Data tersimpan ke Database MySQL</li>
+                <li>Data akan diupload ke IPFS menggunakan Pinata</li>
+                <li>File akan disimpan dengan format JSON</li>
+                <li>CID akan disimpan di database</li>
+                <li>IPFS Hash: {currentMintingItem.ipfs || 'Belum diupload'}</li>
               </ul>
             </div>
           </div>
@@ -157,7 +169,7 @@ export default function MintPopup({
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-800">
-                🏗️ Mint ke Blockchain (Simulasi)
+                🏗️ Mint ke Blockchain
               </h3>
               <button
                 onClick={onClose}
@@ -172,15 +184,17 @@ export default function MintPopup({
                 <div className="flex items-center">
                   <div className="text-green-600 mr-3">✅</div>
                   <div>
-                    <p className="font-medium text-green-800">Simulasi Upload IPFS Selesai!</p>
-                    <p className="text-sm text-green-600 mt-1">Mode sandbox - tidak ada upload nyata</p>
+                    <p className="font-medium text-green-800">Upload IPFS Berhasil!</p>
+                    <p className="text-sm text-green-600 mt-1">
+                      CID: {currentMintingItem.ipfs || 'IPFS Hash'}
+                    </p>
                   </div>
                 </div>
               </div>
               
               <div className="space-y-4">
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-2">Detail Minting (Simulasi)</h4>
+                  <h4 className="font-medium text-gray-700 mb-2">Detail Minting</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Nama Mahasiswa:</span>
@@ -195,8 +209,12 @@ export default function MintPopup({
                       <span className="font-mono">{currentMintingItem.certificateId}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Status:</span>
-                      <span className="font-medium text-yellow-600">Verified → Minted</span>
+                      <span className="text-gray-600">IPFS Hash:</span>
+                      <span className="font-mono text-xs">{currentMintingItem.ipfs}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Wallet Address:</span>
+                      <span className="font-mono text-xs">{currentMintingItem.walletAddress || 'Belum ditentukan'}</span>
                     </div>
                   </div>
                 </div>
@@ -205,12 +223,12 @@ export default function MintPopup({
                   <div className="flex items-start">
                     <div className="text-yellow-600 mr-3">💰</div>
                     <div>
-                      <p className="font-medium text-yellow-800">Biaya Gas Fee (Simulasi)</p>
+                      <p className="font-medium text-yellow-800">Biaya Gas Fee</p>
                       <p className="text-2xl font-bold text-yellow-700 mt-1">
                         {mintProgress.estimatedGas} MATIC
                       </p>
                       <p className="text-sm text-yellow-600 mt-1">
-                        Mode sandbox - tidak ada pembayaran nyata
+                        Estimasi biaya untuk minting SBT
                       </p>
                     </div>
                   </div>
@@ -221,15 +239,18 @@ export default function MintPopup({
                     onClick={onMintToBlockchain}
                     className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                   >
-                    Simulasi Mint SBT
+                    Mint SBT ke Blockchain
                   </button>
                 ) : (
                   <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Simulasi minting ke blockchain...</p>
+                    <p className="text-gray-600">Minting ke blockchain Polygon...</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Mode sandbox - tidak ada transaksi blockchain nyata
+                      Mohon tunggu, transaksi sedang diproses
                     </p>
+                    {mintProgress.error && (
+                      <p className="text-red-500 text-sm mt-2">{mintProgress.error}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -246,20 +267,40 @@ export default function MintPopup({
               </div>
               
               <h3 className="text-xl font-bold text-gray-800 mb-2">
-                🎉 Simulasi Berhasil!
+                🎉 Minting Berhasil!
               </h3>
               <p className="text-gray-600 mb-4">
-                Ijazah <strong>{currentMintingItem.namaMahasiswa}</strong> berhasil di-mint (simulasi)!
+                Ijazah <strong>{currentMintingItem.namaMahasiswa}</strong> berhasil di-mint ke blockchain!
               </p>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center">
+                <div className="flex items-start">
                   <div className="text-blue-600 mr-3">ℹ️</div>
-                  <div>
-                    <p className="font-medium text-blue-800">Mode Sandbox Aktif</p>
-                    <p className="text-sm text-blue-600 mt-1">
-                      Status berubah menjadi "Minted" di database MySQL.
-                    </p>
+                  <div className="text-left w-full">
+                    <p className="font-medium text-blue-800">Detail Transaksi</p>
+                    <div className="mt-2 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Token ID:</span>
+                        <span className="font-mono text-blue-800">{currentMintingItem.tokenID}</span>
+                      </div>
+                      {mintProgress.txHash && (
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Tx Hash:</span>
+                          <button
+                            onClick={() => openBlockExplorer(mintProgress.txHash!)}
+                            className="font-mono text-blue-600 hover:underline truncate max-w-[200px]"
+                          >
+                            {mintProgress.txHash.substring(0, 10)}...{mintProgress.txHash.substring(58)}
+                          </button>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">IPFS CID:</span>
+                        <span className="font-mono text-blue-600 truncate max-w-[150px]">
+                          {currentMintingItem.ipfs}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -279,7 +320,7 @@ export default function MintPopup({
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Token ID:</span>
-                  <span className="font-mono">{currentMintingItem.tokenID || 'Generated after mint'}</span>
+                  <span className="font-mono">{currentMintingItem.tokenID}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-700">Status:</span>
