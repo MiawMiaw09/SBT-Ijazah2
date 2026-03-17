@@ -4,13 +4,13 @@ const { generateFileHash } = require('../middleware/uploadMiddleware');
 const fs = require('fs');
 const path = require('path');
 
-// Import services baru
+// Import services
 const blockchainService = require('../services/blockchainService');
 const pinataService = require('../services/pinataService');
 
 // ========== FUNGSI UTAMA ==========
 
-// @desc    Upload ijazah baru
+// @desc    Upload ijazah baru (dengan PDF ke IPFS)
 // @route   POST /api/diplomas/upload
 // @access  Public
 exports.uploadDiploma = async (req, res) => {
@@ -48,7 +48,7 @@ exports.uploadDiploma = async (req, res) => {
       });
     }
 
-    // ✅ CEK APAKAH CERTIFICATE ID SUDAH ADA
+    // Cek apakah CERTIFICATE ID sudah ada
     if (req.body.certificate_id) {
       const existingCertId = await Diploma.findOne({ where: { certificate_id: req.body.certificate_id } });
       if (existingCertId) {
@@ -59,6 +59,24 @@ exports.uploadDiploma = async (req, res) => {
         });
       }
     }
+
+    // Upload file PDF ke IPFS via Pinata
+    console.log('📤 Uploading PDF to IPFS...');
+    const fileStream = fs.createReadStream(req.file.path);
+    
+    const pinataResult = await pinataService.uploadFile(
+      fileStream, 
+      `ijazah-${req.body.npm}-${Date.now()}.pdf`
+    );
+    
+    if (!pinataResult.success) {
+      // Hapus file jika gagal upload ke IPFS
+      fs.unlinkSync(req.file.path);
+      throw new Error('Gagal upload PDF ke IPFS: ' + pinataResult.error);
+    }
+    
+    const pdfIpfsHash = pinataResult.ipfsHash;
+    console.log('✅ PDF uploaded to IPFS:', pdfIpfsHash);
 
     // Format tanggal dari dd/mm/yyyy ke yyyy-mm-dd
     let tanggalLulus = req.body.tanggal_lulus;
@@ -78,11 +96,9 @@ exports.uploadDiploma = async (req, res) => {
       }
     }
 
-    // Buat data diploma - DENGAN CERTIFICATE_ID
+    // Buat data diploma
     const diplomaData = {
-      // ✅ TAMBAHKAN CERTIFICATE_ID DARI REQUEST BODY
       certificate_id: req.body.certificate_id,
-      
       nama_lengkap: req.body.nama_lengkap,
       npm: req.body.npm,
       nik: req.body.nik,
@@ -98,11 +114,17 @@ exports.uploadDiploma = async (req, res) => {
       nomor_sk_rektor: req.body.nomor_sk_rektor || null,
       tanggal_sk_rektor: tanggalSKRektor || null,
       wallet_address: req.body.wallet_address,
+      
+      // File info
       nama_file: req.file.originalname,
       path_file: req.file.path,
       ukuran_file: req.file.size,
       tipe_file: req.file.mimetype,
       file_hash: fileHash,
+      // Gunakan field ipfs_* yang benar (bukan pdf_ipfs_*)
+      ipfs_hash: pdfIpfsHash,
+      ipfs_url: `https://gateway.pinata.cloud/ipfs/${pdfIpfsHash}`,
+      
       uploaded_by: req.body.uploaded_by || 'user',
       status: 'pending'
     };
@@ -111,7 +133,9 @@ exports.uploadDiploma = async (req, res) => {
     console.log('📝 Data yang akan disimpan:', {
       certificate_id: diplomaData.certificate_id,
       nama_lengkap: diplomaData.nama_lengkap,
-      npm: diplomaData.npm
+      npm: diplomaData.npm,
+      ipfs_hash: diplomaData.ipfs_hash,
+      ipfs_url: diplomaData.ipfs_url
     });
 
     // Simpan ke database
@@ -119,6 +143,8 @@ exports.uploadDiploma = async (req, res) => {
 
     console.log('✅ Data berhasil disimpan dengan ID:', diploma.id);
     console.log('✅ Certificate ID tersimpan:', diploma.certificate_id);
+    console.log('✅ IPFS Hash tersimpan:', diploma.ipfs_hash);
+    console.log('✅ IPFS URL tersimpan:', diploma.ipfs_url);
 
     res.status(201).json({
       success: true,
@@ -128,6 +154,8 @@ exports.uploadDiploma = async (req, res) => {
         nama_lengkap: diploma.nama_lengkap,
         npm: diploma.npm,
         certificate_id: diploma.certificate_id,
+        ipfs_hash: diploma.ipfs_hash,
+        ipfs_url: diploma.ipfs_url,
         status: diploma.status,
         created_at: diploma.created_at
       }
@@ -288,7 +316,9 @@ exports.verifyDiploma = async (req, res) => {
         status: diploma.status,
         certificate_id: diploma.certificate_id,
         transaction_hash: diploma.transaction_hash,
-        minted_at: diploma.minted_at
+        minted_at: diploma.minted_at,
+        pdf_ipfs_hash: diploma.pdf_ipfs_hash,
+        pdf_ipfs_url: diploma.pdf_ipfs_url
       }
     });
   } catch (error) {
@@ -320,6 +350,7 @@ exports.getPendingDiplomas = async (req, res) => {
         program_studi: d.program_studi,
         gelar_akademik: d.gelar_akademik,
         certificate_id: d.certificate_id,
+        pdf_ipfs_hash: d.pdf_ipfs_hash,
         created_at: d.created_at,
         status: d.status
       }))
@@ -377,7 +408,8 @@ exports.mintDiploma = async (req, res) => {
         status: diploma.status,
         transaction_hash: diploma.transaction_hash,
         token_id: diploma.token_id,
-        minted_at: diploma.minted_at
+        minted_at: diploma.minted_at,
+        pdf_ipfs_hash: diploma.pdf_ipfs_hash
       }
     });
   } catch (error) {
@@ -445,13 +477,6 @@ exports.getDashboardStats = async (req, res) => {
     };
     
     console.log("📊 Dashboard stats:", data);
-    console.log("📊 Dashboard stats response:", {
-      total,
-      minted,
-      pending,
-      mintedPercentage,
-      pendingPercentage
-    });
     
     res.json({
       success: true,
@@ -505,7 +530,8 @@ exports.deleteDiploma = async (req, res) => {
       nama_lengkap: diploma.nama_lengkap,
       npm: diploma.npm,
       certificate_id: diploma.certificate_id,
-      file_path: diploma.path_file
+      file_path: diploma.path_file,
+      pdf_ipfs_hash: diploma.pdf_ipfs_hash
     };
 
     // Hapus file fisik jika ada
@@ -626,7 +652,8 @@ exports.softDeleteDiploma = async (req, res) => {
         npm: diploma.npm,
         status: diploma.status,
         verification_notes: diploma.verification_notes,
-        updated_at: diploma.updated_at
+        updated_at: diploma.updated_at,
+        pdf_ipfs_hash: diploma.pdf_ipfs_hash
       }
     });
 
@@ -702,7 +729,7 @@ exports.healthCheck = async (req, res) => {
 
 // ========== FUNGSI BARU UNTUK MINTING OTOMATIS ==========
 
-// @desc    Upload ke IPFS via Pinata
+// @desc    Upload ke IPFS via Pinata (untuk data JSON diploma)
 // @route   POST /api/diplomas/:id/upload-ipfs
 // @access  Private/Admin
 exports.uploadToIPFS = async (req, res) => {
@@ -719,21 +746,19 @@ exports.uploadToIPFS = async (req, res) => {
       });
     }
 
-    // Cek apakah sudah pernah diupload ke IPFS
-   // if (diploma.file_hash && diploma.file_hash.length > 0) {
-     // return res.status(400).json({
-       // success: false,
-        //message: 'Data sudah pernah diupload ke IPFS',
-        //data: { ipfsHash: diploma.file_hash }
-      //});
-   // }
+    // CATATAN: Field ipfs_hash sudah berisi file PDF dari step 1 upload
+    // Jadi kita TIDAK cek apakah sudah upload, karena kita akan update field yang sama
+    // (overwrite dengan metadata JSON hash adalah OK, karena file PDF sudah tersimpan di Pinata)
 
-    console.log('📤 Uploading diploma to IPFS:', diploma.nama_lengkap);
+    console.log('📤 Uploading diploma metadata to IPFS:', diploma.nama_lengkap);
 
-    // Upload ke IPFS via Pinata
+    // Buat nama file dengan format NAMA-NPM
+    const fileName = `${diploma.nama_lengkap.replace(/\s+/g, '_')}-${diploma.npm}.json`;
+
+    // Upload ke IPFS via Pinata dengan nama file yang sudah ditentukan
     const uploadResult = await pinataService.uploadJSON(
       diplomaData,
-      `diploma-${diploma.certificate_id}.json`
+      fileName
     );
 
     if (!uploadResult.success) {
@@ -744,7 +769,10 @@ exports.uploadToIPFS = async (req, res) => {
       });
     }
 
-    // Simpan IPFS hash ke database (gunakan field ipfs_hash, bukan file_hash)
+    // Simpan IPFS metadata hash ke database untuk referensi
+    // Field ipfs_hash sudah berisi PDF dari step 1 upload,
+    // jadi kita update dengan metadata JSON hash untuk step 2 (mint)
+    // Data PDF tetap tersimpan di Pinata, tidak akan hilang
     await diploma.update({
       ipfs_hash: uploadResult.ipfsHash,
       ipfs_url: uploadResult.ipfsUrl
@@ -752,13 +780,14 @@ exports.uploadToIPFS = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Berhasil upload ke IPFS',
+      message: 'Berhasil upload metadata ke IPFS',
       data: {
         id: diploma.id,
         certificate_id: diploma.certificate_id,
         ipfsHash: uploadResult.ipfsHash,
         ipfsUrl: uploadResult.ipfsUrl,
-        pinataUrl: uploadResult.pinataUrl
+        pinataUrl: uploadResult.pinataUrl,
+        fileName: fileName
       }
     });
 
@@ -772,7 +801,7 @@ exports.uploadToIPFS = async (req, res) => {
   }
 };
 
-// @desc    Mint ke blockchain via Polygon Amoy
+// @desc    Mint ke blockchain via Polygon Amoy dan update status
 // @route   POST /api/diplomas/:id/mint-blockchain
 // @access  Private/Admin
 exports.mintToBlockchain = async (req, res) => {
@@ -797,11 +826,11 @@ exports.mintToBlockchain = async (req, res) => {
       });
     }
 
-    // Cek IPFS hash (gunakan field ipfs_hash)
+    // Cek IPFS hash (metadata JSON)
     if (!ipfsHash && !diploma.ipfs_hash) {
       return res.status(400).json({
         success: false,
-        message: 'IPFS hash tidak ditemukan. Upload ke IPFS terlebih dahulu.'
+        message: 'IPFS hash metadata tidak ditemukan. Upload metadata ke IPFS terlebih dahulu.'
       });
     }
 
@@ -834,18 +863,34 @@ exports.mintToBlockchain = async (req, res) => {
       });
     }
 
-    // Update status di database (status akan diupdate lewat endpoint terpisah)
-    // Kita hanya return hasil minting, update status dilakukan di endpoint /mint/:id
+    // UPDATE STATUS DI DATABASE
+    console.log(`✅ Minting berhasil, mengupdate status database untuk ID: ${id}`);
+    
+    await diploma.update({
+      status: 'minted',
+      transaction_hash: mintResult.transactionHash,
+      contract_address: mintResult.contractAddress,
+      token_id: mintResult.tokenId,
+      block_number: mintResult.blockNumber,
+      minted_at: new Date(),
+      minted_by: req.body.minted_by || 'admin'
+    });
+
+    console.log(`✅ Status berhasil diupdate menjadi minted untuk ${diploma.nama_lengkap}`);
 
     res.json({
       success: true,
-      message: 'Berhasil mint ke blockchain',
+      message: 'Berhasil mint ke blockchain dan update status',
       data: {
+        id: diploma.id,
+        npm: diploma.npm,
+        certificate_id: diploma.certificate_id,
+        status: diploma.status,
         tokenId: mintResult.tokenId,
         transactionHash: mintResult.transactionHash,
         blockNumber: mintResult.blockNumber,
         contractAddress: mintResult.contractAddress,
-        gasUsed: mintResult.gasUsed
+        minted_at: diploma.minted_at
       }
     });
 
@@ -899,6 +944,48 @@ exports.checkBlockchainStatus = async (req, res) => {
       success: false,
       message: 'Blockchain not connected',
       error: error.message
+    });
+  }
+};
+
+// @desc    Get PDF dari IPFS
+// @route   GET /api/diplomas/:id/pdf
+// @access  Public
+exports.getDiplomaPDF = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const diploma = await Diploma.findByPk(id);
+    
+    if (!diploma) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ijazah tidak ditemukan'
+      });
+    }
+    
+    if (!diploma.pdf_ipfs_hash) {
+      return res.status(404).json({
+        success: false,
+        message: 'PDF tidak ditemukan di IPFS'
+      });
+    }
+    
+    // Redirect ke gateway IPFS
+    const gatewayUrl = `https://gateway.pinata.cloud/ipfs/${diploma.pdf_ipfs_hash}`;
+    
+    res.json({
+      success: true,
+      pdf_url: gatewayUrl,
+      pdf_ipfs_hash: diploma.pdf_ipfs_hash
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting PDF:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting PDF',
+      error: process.env.NODE_ENV === 'development' ? error.message : {}
     });
   }
 };

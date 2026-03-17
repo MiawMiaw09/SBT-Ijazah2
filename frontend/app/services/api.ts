@@ -35,6 +35,11 @@ export interface Diploma {
   tipe_file?: string;
   file_hash: string;
   certificate_id: string;
+  
+  // IPFS fields (dari backend)
+  ipfs_hash?: string;
+  ipfs_url?: string;
+  
   status: 'pending' | 'verified' | 'minted' | 'rejected';
   verification_notes?: string;
   created_at: string;

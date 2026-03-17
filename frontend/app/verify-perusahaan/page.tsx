@@ -49,6 +49,7 @@ export default function VerificationPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null); // ✅ Ref untuk error section
   const topRef = useRef<HTMLDivElement>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -96,8 +97,31 @@ export default function VerificationPage() {
       } else {
         throw new Error('Format data tidak valid');
       }
+
+      // ✅ VALIDASI: Hanya tampilkan data dengan status 'minted'
+      if (diplomaData.status !== 'minted') {
+        console.log(`⛔ Ijazah ditemukan tapi status: ${diplomaData.status} (harus minted)`);
+        
+        // Berikan pesan error yang sesuai dengan statusnya
+        let errorMessage = '';
+        switch (diplomaData.status) {
+          case 'pending':
+            errorMessage = 'Ijazah masih dalam proses verifikasi dan belum di-mint ke blockchain. Silakan cek kembali nanti.';
+            break;
+          case 'verified':
+            errorMessage = 'Ijazah sudah terverifikasi tapi belum di-mint ke blockchain. Silakan cek kembali nanti.';
+            break;
+          case 'rejected':
+            errorMessage = 'Ijazah ditolak dan tidak dapat diverifikasi.';
+            break;
+          default:
+            errorMessage = 'Ijazah belum di-mint ke blockchain. Hanya ijazah dengan status minted yang dapat diverifikasi.';
+        }
+        
+        throw new Error(errorMessage);
+      }
       
-      // TAMPILKAN DATA APAPUN STATUSNYA (tidak perlu validasi minted)
+      // ✅ Hanya set data jika statusnya minted
       setVerificationData(diplomaData);
       setError(null);
       
@@ -109,6 +133,30 @@ export default function VerificationPage() {
       setIsLoading(false);
     }
   };
+
+  // ✅ Auto scroll ke error section ketika error muncul
+  useEffect(() => {
+    if (error && errorRef.current) {
+      setTimeout(() => {
+        errorRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }, 100);
+    }
+  }, [error]);
+
+  // Auto scroll ke hasil verifikasi ketika data tersedia
+  useEffect(() => {
+    if (verificationData && resultsRef.current) {
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }, 100);
+    }
+  }, [verificationData]);
 
   const resetVerification = () => {
     setVerificationData(null);
@@ -123,17 +171,6 @@ export default function VerificationPage() {
       });
     }, 100);
   };
-
-  useEffect(() => {
-    if (verificationData && resultsRef.current) {
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }, 100);
-    }
-  }, [verificationData]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -267,7 +304,7 @@ export default function VerificationPage() {
               </div>
             </div>
 
-            {/* Navigation - UPDATED: Link langsung ke homepage dengan hash */}
+            {/* Navigation */}
             <nav className="hidden md:flex space-x-8">
               <Link href="/" className="text-gray-700 hover:text-blue-600 font-medium">
                 Home
@@ -378,22 +415,29 @@ export default function VerificationPage() {
                       <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
                       Hasil verifikasi akan ditampilkan secara detail
                     </li>
+                    <li className="flex items-center text-purple-700 font-medium mt-1">
+                      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
+                      <span className="font-semibold">Hanya ijazah dengan status "Minted" yang dapat diverifikasi</span>
+                    </li>
                   </ul>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Pesan Error */}
+          {/* Pesan Error - Ditingkatkan untuk menampilkan status spesifik */}
           {error && searchAttempted && (
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-red-200">
+            <div 
+              ref={errorRef} // ✅ Menambahkan ref untuk auto scroll
+              className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-red-200 scroll-mt-8"
+            >
               <div className="text-center">
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Ijazah Tidak Ditemukan</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Ijazah Tidak Dapat Diverifikasi</h2>
                 <p className="text-gray-600 mb-4">{error}</p>
                 <div className="space-y-3 max-w-md mx-auto">
                   <div className="bg-gray-50 p-3 rounded-lg">
@@ -405,7 +449,7 @@ export default function VerificationPage() {
                     </p>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Pastikan Nomor Ijazah yang dimasukkan benar. Nomor Ijazah biasanya tercetak pada bagian bawah ijazah.
+                    Pastikan Nomor Ijazah yang dimasukkan benar dan ijazah sudah melalui proses minting di blockchain.
                   </p>
                   <button
                     onClick={resetVerification}
@@ -431,34 +475,23 @@ export default function VerificationPage() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Hasil Verifikasi Lengkap</h2>
                 <p className="text-gray-600 text-sm">Detail informasi ijazah yang diverifikasi</p>
+                <div className="inline-flex items-center mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                  Verified on Blockchain
+                </div>
               </div>
               
-              {/* Status Validasi - MODIFIED untuk semua status */}
+              {/* Status Validasi */}
               <div className="mb-8">
-                <div className={`border rounded-xl p-5 ${
-                  verificationData.status === 'minted' ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' :
-                  verificationData.status === 'verified' ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200' :
-                  verificationData.status === 'pending' ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200' :
-                  'bg-gradient-to-r from-red-50 to-pink-50 border-red-200'
-                }`}>
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
-                        verificationData.status === 'minted' ? 'bg-green-100' :
-                        verificationData.status === 'verified' ? 'bg-blue-100' :
-                        verificationData.status === 'pending' ? 'bg-yellow-100' :
-                        'bg-red-100'
-                      }`}>
+                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
                         <span className="text-2xl">{getStatusIcon(verificationData.status)}</span>
                       </div>
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">Status Ijazah</h3>
-                        <p className={`font-medium ${
-                          verificationData.status === 'minted' ? 'text-green-700' :
-                          verificationData.status === 'verified' ? 'text-blue-700' :
-                          verificationData.status === 'pending' ? 'text-yellow-700' :
-                          'text-red-700'
-                        }`}>
+                        <p className="font-medium text-green-700">
                           {getStatusLabel(verificationData.status)}
                         </p>
                         <p className="text-sm text-gray-600">
@@ -467,28 +500,32 @@ export default function VerificationPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        verificationData.status === 'minted' ? 'bg-green-100 text-green-800' :
-                        verificationData.status === 'verified' ? 'bg-blue-100 text-blue-800' :
-                        verificationData.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {verificationData.status === 'minted' ? '✓ Blockchain' : 
-                         verificationData.status === 'verified' ? '✓ Terverifikasi' :
-                         verificationData.status === 'pending' ? '⏳ Pending' :
-                         '✗ Ditolak'}
+                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        ✓ Blockchain Verified
                       </span>
-                      {verificationData.status === 'minted' && (
-                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                          ✓ Digital Signature
-                        </span>
-                      )}
+                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        ✓ Digital Signature
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-green-200 grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600">Waktu Minting</p>
+                      <p className="font-semibold text-gray-900">
+                        {verificationData.minted_at ? formatDateShort(verificationData.minted_at) : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Diverifikasi oleh</p>
+                      <p className="font-semibold text-gray-900">
+                        {verificationData.minted_by || 'Admin'}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Data dalam Grid Layout */}
+              {/* Data dalam Grid Layout - sama seperti sebelumnya */}
               <div className="space-y-6">
                 {/* Bagian 1: Identitas Mahasiswa */}
                 <div>
@@ -603,7 +640,7 @@ export default function VerificationPage() {
                   </div>
                 </div>
 
-                {/* Bagian 4: Data Blockchain - Hanya tampilkan jika ada data */}
+                {/* Bagian 4: Data Blockchain */}
                 {(verificationData.token_id || verificationData.transaction_hash || verificationData.contract_address) && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -744,29 +781,9 @@ export default function VerificationPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Bagian 5: Catatan jika status rejected */}
-                {verificationData.status === 'rejected' && verificationData.verification_notes && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <span className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-                        <span className="text-red-600">📝</span>
-                      </span>
-                      Catatan Penolakan
-                    </h3>
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-sm text-gray-700 whitespace-pre-line">
-                        {verificationData.verification_notes}
-                      </p>
-                      <p className="text-xs text-red-600 mt-2">
-                        Ijazah ini memerlukan revisi sesuai dengan catatan di atas.
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Action Buttons - UPDATED: Direct links to amoy.polygonscan.com and opensea.io */}
+              {/* Action Buttons */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row gap-3 justify-between">
                   <div className="text-sm text-gray-500">
@@ -793,10 +810,11 @@ export default function VerificationPage() {
                       Verifikasi Lagi
                     </button>
                     
-                    {/* Tombol Cek di PolygonScan - Langsung ke amoy.polygonscan.com */}
+                    {/* Tombol Cek di PolygonScan */}
                     <button
-                      onClick={() => window.open('https://amoy.polygonscan.com', '_blank')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-300 text-sm flex items-center"
+                      onClick={() => verificationData.transaction_hash && openPolygonscan(verificationData.transaction_hash)}
+                      className={`${verificationData.transaction_hash ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-semibold py-2 px-6 rounded-lg transition duration-300 text-sm flex items-center`}
+                      disabled={!verificationData.transaction_hash}
                     >
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -804,10 +822,11 @@ export default function VerificationPage() {
                       Cek di PolygonScan
                     </button>
                     
-                    {/* Tombol Cek di OpenSea - Langsung ke opensea.io */}
+                    {/* Tombol Cek di OpenSea */}
                     <button
-                      onClick={() => window.open('https://opensea.io', '_blank')}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-300 text-sm flex items-center"
+                      onClick={() => window.open(`https://opensea.io/assets/matic/${verificationData.contract_address}/${verificationData.token_id}`, '_blank')}
+                      className={`${verificationData.contract_address && verificationData.token_id ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-semibold py-2 px-6 rounded-lg transition duration-300 text-sm flex items-center`}
+                      disabled={!verificationData.contract_address || !verificationData.token_id}
                     >
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -850,7 +869,9 @@ export default function VerificationPage() {
             <div className="mt-4 text-xs text-gray-400">
               <p>Status Ijazah:</p>
               <div className="flex justify-center space-x-2 mt-1">
-                <span className="px-2 py-1 bg-yellow-100 text-gray-800 rounded">Ijazah yang tertera merupakan ijazah yang sudah terverifikasi dan terupload ke blockchain</span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                  Hanya ijazah dengan status "Minted" yang dapat diverifikasi
+                </span>
               </div>
             </div>
           </div>

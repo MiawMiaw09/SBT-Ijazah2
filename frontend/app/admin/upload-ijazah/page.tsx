@@ -4,7 +4,7 @@ import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { diplomaAPI } from '@/app/services/api';
 
-interface FormData {
+interface IjazahFormData {
   // Data Sistem (diletakkan di atas)
   certificate_id: string;
   uploaded_by: string;
@@ -38,7 +38,7 @@ export default function UploadIjazah() {
   const router = useRouter();
   
   // Data kosong sebagai initial state
-  const initialEmptyFormData: FormData = {
+  const initialEmptyFormData: IjazahFormData = {
     certificate_id: '',
     uploaded_by: 'admin',
     
@@ -63,12 +63,16 @@ export default function UploadIjazah() {
     ijazah_file: null
   };
 
-  const [formData, setFormData] = useState<FormData>(initialEmptyFormData);
+  const [formData, setFormData] = useState<IjazahFormData>(initialEmptyFormData);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // API Base URL
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   // Update tahun akademik saat tahun lulus berubah
   useEffect(() => {
@@ -211,27 +215,72 @@ export default function UploadIjazah() {
     }
   };
 
+  // Fungsi untuk upload dengan progress tracking
+  const uploadWithProgress = async (formDataToSend: FormData) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percentComplete);
+        }
+      });
+      
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            resolve({ success: true, data: { message: 'Upload berhasil' } });
+          }
+        } else {
+          try {
+            const error = JSON.parse(xhr.responseText);
+            reject(new Error(error.message || 'Upload gagal'));
+          } catch (e) {
+            reject(new Error(`Upload gagal dengan status ${xhr.status}`));
+          }
+        }
+      });
+      
+      xhr.addEventListener('error', () => {
+        reject(new Error('Network error'));
+      });
+      
+      xhr.addEventListener('timeout', () => {
+        reject(new Error('Request timeout'));
+      });
+      
+      xhr.open('POST', `${API_BASE_URL}/api/diplomas/upload`);
+      xhr.timeout = 60000; // 60 detik timeout
+      xhr.send(formDataToSend);
+    });
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
+    setUploadProgress(0);
     
     try {
       // Validasi data wajib
       const requiredFields = [
-        'certificate_id', // Certificate ID wajib diisi
+        'certificate_id',
         'nama_lengkap',
         'npm',
         'nik',
         'program_studi',
-        'fakultas', // Fakultas wajib diisi (otomatis)
-        'gelar_akademik', // Gelar wajib diisi (otomatis)
+        'fakultas',
+        'gelar_akademik',
         'tanggal_lulus',
         'nomor_sk_rektor',
         'wallet_address'
       ];
 
-      const missingFields = requiredFields.filter(field => !formData[field as keyof FormData]);
+      const missingFields = requiredFields.filter(field => !formData[field as keyof IjazahFormData]);
       
       if (missingFields.length > 0) {
         setError(`Harap lengkapi semua field yang wajib diisi: ${missingFields.join(', ')}`);
@@ -299,39 +348,49 @@ export default function UploadIjazah() {
       // Membuat FormData untuk API
       const formDataToSend = new FormData();
       
-      // Tambahkan semua field form sesuai dengan struktur database
+      // Tambahkan file PDF - PASTIKAN PDF DIKIRIM KE BACKEND
+      if (formData.ijazah_file) {
+        formDataToSend.append('ijazah_file', formData.ijazah_file); // <-- PDF DIKIRIM KE BACKEND
+      }
+      
+      // Tambahkan semua field form lainnya
       Object.entries(formData).forEach(([key, value]) => {
         if (key !== 'ijazah_file' && value !== null && value !== '') {
           formDataToSend.append(key, value.toString());
         }
       });
       
-      // Tambahkan metadata file
-      if (formData.ijazah_file) {
-        formDataToSend.append('nama_file', formData.ijazah_file.name);
-        formDataToSend.append('ukuran_file', formData.ijazah_file.size.toString());
-        formDataToSend.append('tipe_file', formData.ijazah_file.type);
-        formDataToSend.append('ijazah_file', formData.ijazah_file);
-      }
-      
-      // Kirim ke API
-      console.log('Mengirim data ke API:', {
+      console.log('📤 Mengirim data ke API dengan file PDF:', {
         certificate_id: formData.certificate_id,
         nama_lengkap: formData.nama_lengkap,
         npm: formData.npm,
-        program_studi: formData.program_studi
+        fileName: formData.ijazah_file.name,
+        fileSize: formData.ijazah_file.size
       });
+
+      // Kirim ke backend dengan progress tracking - PASTIKAN formData, BUKAN JSON
+      const response = await uploadWithProgress(formDataToSend) as any;
       
-      const response = await diplomaAPI.uploadDiploma(formDataToSend);
+      console.log('✅ Upload response:', response);
       
       // Tampilkan informasi sukses
-      alert(`✅ Ijazah berhasil diupload!\n\nCertificate ID: ${response.data?.certificate_id || formData.certificate_id}\nNama: ${formData.nama_lengkap}\nStatus: ${response.data?.status || 'pending'}\n\nData akan diverifikasi sebelum di-mint sebagai SBT.`);
+      alert(`✅ Ijazah berhasil diupload ke IPFS!\n\n` +
+            `Certificate ID: ${response.data?.certificate_id || formData.certificate_id}\n` +
+            `Nama: ${formData.nama_lengkap}\n` +
+            `File PDF: ${fileName}\n` +
+            `Status: ${response.data?.status || 'pending'}\n\n` +
+            `File PDF akan tersedia di IPFS setelah proses minting.`);
       
       // Reset form setelah submit sukses
       resetForm();
       
+      // Redirect ke halaman data ijazah setelah 2 detik
+      setTimeout(() => {
+        router.push('/admin/data-ijazah');
+      }, 2000);
+      
     } catch (err: any) {
-      console.error('Upload error:', err);
+      console.error('❌ Upload error:', err);
       
       // Handle specific error messages
       if (err.response?.data?.error) {
@@ -351,6 +410,7 @@ export default function UploadIjazah() {
       }
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -363,6 +423,7 @@ export default function UploadIjazah() {
     setFileName('');
     setFileSize('');
     setError('');
+    setUploadProgress(0);
     
     // Reset file input jika ada
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
@@ -448,7 +509,7 @@ export default function UploadIjazah() {
               {/* Admin Badge - Ukuran lebih kecil */}
               <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mb-3">
                 <span className="mr-1">👨‍💼</span>
-                MODE ADMIN - Upload Ijazah Digital
+                MODE ADMIN - Upload Ijazah Digital ke IPFS
               </div>
               
               <h1 className="text-3xl font-bold text-gray-900">
@@ -457,18 +518,41 @@ export default function UploadIjazah() {
               <p className="text-gray-600 mt-1">
                 Upload ijazah untuk diverifikasi dan di-mint sebagai Soulbound Token (SBT)
               </p>
+              <p className="text-sm text-blue-600 mt-2">
+                <span className="font-medium">✨ Fitur Baru:</span> File PDF akan diupload ke IPFS dan tersedia secara permanen
+              </p>
             </div>
             
             {/* Notifikasi untuk admin */}
-              <div className="flex items-start">
-                <div className="mr-2 mt-0.5">
- 
+            <div className="flex items-start">
+              <div className="mr-2 mt-0.5">
                 <div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Progress Bar */}
+        {isSubmitting && uploadProgress > 0 && (
+          <div className="mb-6">
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Upload Progress</span>
+                <span className="text-sm font-medium text-blue-600">{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {uploadProgress < 100 ? 'Mengupload file PDF ke server...' : 'Upload selesai! Memproses data...'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -848,6 +932,9 @@ export default function UploadIjazah() {
                         <p className="text-green-600 text-sm mt-1">
                           Ukuran: {fileSize} • Tipe: PDF
                         </p>
+                        <p className="text-xs text-blue-600 mt-2">
+                          <span className="font-medium">📌 IPFS Ready:</span> File akan diupload ke IPFS
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -885,10 +972,24 @@ export default function UploadIjazah() {
                     </div>
                   </div>
                 </div>
+
+                {/* IPFS Info */}
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="mr-3">
+                      <span className="text-purple-600">📌</span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-purple-800">IPFS Storage</h4>
+                      <p className="text-purple-600 text-sm">File akan diupload ke IPFS</p>
+                      <p className="text-xs text-gray-500 mt-1">Penyimpanan permanen dan terdesentralisasi</p>
+                    </div>
+                  </div>
+                </div>
               </div>
               <p className="text-sm text-gray-500 mt-4">
                 Data akan disimpan dengan status <strong>pending</strong> dan dapat di-mint sebagai SBT setelah verifikasi.
-                Setelah di-mint, akan muncul informasi blockchain seperti transaction hash, contract address, dan token ID.
+                File PDF akan diupload ke IPFS untuk penyimpanan permanen.
               </p>
             </div>
 
@@ -936,12 +1037,12 @@ export default function UploadIjazah() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Memproses...
+                      {uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Memproses...'}
                     </>
                   ) : (
                     <>
                       <span className="mr-2">📤</span>
-                      Upload & Simpan Data
+                      Upload ke IPFS & Simpan
                     </>
                   )}
                 </button>
@@ -1074,6 +1175,7 @@ export default function UploadIjazah() {
                           <div>
                             <p className="font-medium">{fileName || 'Belum ada file'}</p>
                             {fileSize && <p className="text-sm text-gray-500">Ukuran: {fileSize}</p>}
+                            <p className="text-xs text-purple-600 mt-1">Akan diupload ke IPFS</p>
                           </div>
                         </div>
                       </div>

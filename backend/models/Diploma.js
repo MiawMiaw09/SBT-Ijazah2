@@ -1,3 +1,5 @@
+// backend/models/Diploma.js
+
 module.exports = (sequelize, DataTypes) => {
   const Diploma = sequelize.define('Diploma', {
     // Data Mahasiswa
@@ -107,22 +109,24 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(50),
       allowNull: true
     },
-     nomor_sk_rektor: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
-    defaultValue: null
-  },
-  
-  tanggal_sk_rektor: {
-    type: DataTypes.DATEONLY,
-    allowNull: true,
-    defaultValue: null,
-    validate: {
-      isDate: {
-        msg: 'Format tanggal SK Rektor tidak valid'
+    
+    nomor_sk_rektor: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      defaultValue: null
+    },
+    
+    tanggal_sk_rektor: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      defaultValue: null,
+      validate: {
+        isDate: {
+          msg: 'Format tanggal SK Rektor tidak valid'
+        }
       }
-    }
-  },
+    },
+    
     // Data Blockchain
     wallet_address: {
       type: DataTypes.STRING(42),
@@ -188,6 +192,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     
+    // KOLOM UNTUK VALIDASI FILE (SHA-256 HASH)
     file_hash: {
       type: DataTypes.STRING(64),
       allowNull: false,
@@ -200,11 +205,44 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     
+    // ===== KOLOM BARU UNTUK IPFS PDF =====
+    pdf_ipfs_hash: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'pdf_ipfs_hash',
+      validate: {
+        len: {
+          args: [46, 100],
+          msg: 'IPFS hash harus antara 46-100 karakter'
+        }
+      }
+    },
+    
+    pdf_ipfs_url: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'pdf_ipfs_url'
+    },
+    // ===== END KOLOM BARU =====
+    
     // Data Sistem
     certificate_id: {
       type: DataTypes.STRING(50),
       allowNull: true,
       // HAPUS unique: true di sini, pindah ke indexes
+    },
+    
+    // Kolom untuk metadata JSON IPFS (sudah ada sebelumnya)
+    ipfs_hash: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'ipfs_hash'
+    },
+    
+    ipfs_url: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'ipfs_url'
     },
     
     status: {
@@ -275,6 +313,11 @@ module.exports = (sequelize, DataTypes) => {
       {
         fields: ['tanggal_lulus'],
         name: 'idx_tanggal_lulus'
+      },
+      // Index untuk kolom IPFS baru
+      {
+        fields: ['pdf_ipfs_hash'],
+        name: 'idx_pdf_ipfs_hash'
       }
     ],
     
@@ -291,6 +334,11 @@ module.exports = (sequelize, DataTypes) => {
             diploma.tanggal_lulus = `${parts[2]}-${parts[1]}-${parts[0]}`;
           }
         }
+
+        // Generate IPFS URL dari hash jika pdf_ipfs_hash ada tapi pdf_ipfs_url belum diisi
+        if (diploma.pdf_ipfs_hash && !diploma.pdf_ipfs_url) {
+          diploma.pdf_ipfs_url = `ipfs://${diploma.pdf_ipfs_hash}`;
+        }
       },
       
       beforeUpdate: (diploma, options) => {
@@ -301,6 +349,11 @@ module.exports = (sequelize, DataTypes) => {
             diploma.tanggal_lulus = `${parts[2]}-${parts[1]}-${parts[0]}`;
           }
         }
+
+        // Update IPFS URL jika pdf_ipfs_hash berubah
+        if (diploma.changed('pdf_ipfs_hash') && diploma.pdf_ipfs_hash) {
+          diploma.pdf_ipfs_url = `ipfs://${diploma.pdf_ipfs_hash}`;
+        }
       }
     },
     
@@ -310,6 +363,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       minted: {
         where: { status: 'minted' }
+      },
+      withPdfIpfs: {
+        where: {
+          pdf_ipfs_hash: { [sequelize.Sequelize.Op.ne]: null }
+        }
       },
       byNpm: function(npm) {
         return {
@@ -335,9 +393,26 @@ module.exports = (sequelize, DataTypes) => {
     });
   };
 
+  // Method untuk mendapatkan URL PDF (gateway)
+  Diploma.prototype.getPdfGatewayUrl = function(gateway = 'pinata') {
+    if (!this.pdf_ipfs_hash) return null;
+    
+    const gateways = {
+      pinata: `https://gateway.pinata.cloud/ipfs/${this.pdf_ipfs_hash}`,
+      ipfs: `https://ipfs.io/ipfs/${this.pdf_ipfs_hash}`,
+      cloudflare: `https://cloudflare-ipfs.com/ipfs/${this.pdf_ipfs_hash}`
+    };
+    
+    return gateways[gateway] || gateways.pinata;
+  };
+
   // Class methods
   Diploma.findByNpm = async function(npm) {
     return await this.findOne({ where: { npm: npm } });
+  };
+
+  Diploma.findByPdfIpfsHash = async function(ipfsHash) {
+    return await this.findOne({ where: { pdf_ipfs_hash: ipfsHash } });
   };
 
   Diploma.generateCertificateId = function() {

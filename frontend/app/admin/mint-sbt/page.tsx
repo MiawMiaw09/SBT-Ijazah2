@@ -1,3 +1,5 @@
+// frontend/app/admin/mint-sbt/page.tsx
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -26,6 +28,12 @@ interface PopupDiplomaData {
   status: 'Pending' | 'Minted';
   selected: boolean;
   ipk?: number; // IPK dari database
+  file_hash_ijazah?: string; // Hash file PDF original
+  ipfs_hash?: string; // IPFS hash dari file PDF yang sudah di-upload
+  ipfs_url?: string; // IPFS gateway URL dari file PDF
+  // Deprecated (untuk backward compatibility)
+  pdf_ipfs_hash?: string;
+  pdf_ipfs_url?: string;
 }
 
 // Interface untuk Diploma dengan selected property
@@ -103,7 +111,7 @@ export default function MintSbtPage() {
       
       // OPTION 2: Coba endpoint alternatif (getDiplomasForMint)
       try {
-        console.log('🔄 [8] Trying fallback: getDiplomasForMint');
+        console.log('🔄 [8] Trying fallback: getPendingDiplomas');
         const fallbackResponse = await diplomaAPI.getPendingDiplomas();
         console.log('📡 [9] Fallback response:', fallbackResponse);
         
@@ -260,8 +268,16 @@ export default function MintSbtPage() {
     }
   };
 
+  // ========== FUNGSI KONVERSI DENGAN PDF_IPFS_HASH ==========
   // Fungsi untuk mengkonversi Diploma ke PopupDiplomaData yang MATCH dengan MintPopup
   const convertToPopupData = (diploma: DiplomaWithSelection): PopupDiplomaData => {
+    console.log('📋 Converting diploma to popup data:', {
+      id: diploma.id,
+      nama: diploma.nama_lengkap,
+      tanggal_lulus: diploma.tanggal_lulus,
+      tanggal_sk_rektor: (diploma as any).tanggal_sk_rektor
+    });
+    
     return {
       id: diploma.id,
       namaMahasiswa: diploma.nama_lengkap,
@@ -280,7 +296,10 @@ export default function MintSbtPage() {
       certificateId: diploma.certificate_id,
       status: diploma.status === 'minted' ? 'Minted' : 'Pending',
       selected: diploma.selected,
-      ipk: diploma.ipk || 0
+      ipk: diploma.ipk || 0,
+      // IPFS PDF fields
+      ipfs_hash: (diploma as any).ipfs_hash || '',
+      ipfs_url: (diploma as any).ipfs_url || ''
     };
   };
 
@@ -305,7 +324,8 @@ export default function MintSbtPage() {
     });
   };
 
-  // Handle upload ke IPFS (step 1) - VERSI NYATA
+  // ========== FUNGSI UPLOAD KE IPFS DENGAN PDF_IPFS_HASH ==========
+  // Handle upload ke IPFS (step 1) - VERSI NYATA DENGAN PDF_IPFS_HASH
   const handleUploadToIPFS = async () => {
     if (!currentMintingItem) return;
     
@@ -321,21 +341,40 @@ export default function MintSbtPage() {
       const estimatedGas = await diplomaAPI.getEstimatedGas();
       setMintProgress(prev => ({ ...prev, estimatedGas }));
 
-      // Siapkan data untuk IPFS (sesuai format smart contract)
+      // Siapkan data untuk IPFS (sesuai format smart contract DAN standar NFT)
       const ipfsData = {
+        // --- Data sesuai struct smart contract (WAJIB) ---
         namaLengkap: currentMintingItem.namaMahasiswa,
         npm: currentMintingItem.npm,
         programStudi: currentMintingItem.programStudi,
         tanggalLulus: currentMintingItem.tanggalKelulusan,
         ipk: currentMintingItem.ipk || 0,
         nomorIjazah: currentMintingItem.certificateId,
-        institusi: 'Universitas Anda', // Ganti dengan nama institusi
-        tanggalTerbit: Math.floor(Date.now() / 1000), // Unix timestamp
-        // Data tambahan
+        institusi: 'Universitas Widya Dharma Pontianak',
         nik: currentMintingItem.nik || '',
         gelarAkademik: currentMintingItem.gelarAkademik,
-        fakultas: currentMintingItem.fakultas || ''
+        fakultas: currentMintingItem.fakultas || '',
+        
+        // --- Metadata standar NFT/OpenSea (UNTUK TAMPILAN) ---
+        name: `Ijazah ${currentMintingItem.namaMahasiswa} - ${currentMintingItem.npm}`,
+        description: `Ijazah Digital ${currentMintingItem.gelarAkademik} Program Studi ${currentMintingItem.programStudi}, ${currentMintingItem.fakultas || ''} Universitas Widya Dharma Pontianak.`,
+        image: 'bafybeifuxzvwmsh2h3lbjzx3ub2m7zfepghrvpxc2epzm7ymiz56hco2ay', // Placeholder image
+        
+        // ===== DIPERBARUI: Gunakan ipfs_hash dari database (file PDF yang sudah di-upload ke IPFS) =====
+        animation_url: currentMintingItem.ipfs_hash 
+          ? `https://gateway.pinata.cloud/ipfs/${currentMintingItem.ipfs_hash}` 
+          : '',
+        
+        external_url: currentMintingItem.ipfs_hash 
+          ? `https://gateway.pinata.cloud/ipfs/${currentMintingItem.ipfs_hash}` 
+          : '',
+        // ===== END UPDATE =====
+        
+        attributes: [] // Kosongkan attributes, tidak ditampilkan di Pinata
       };
+
+      console.log('📝 Data yang akan diupload ke IPFS:', ipfsData);
+      console.log('📄 PDF IPFS Hash used:', currentMintingItem.ipfs_hash || 'Not available');
 
       // Progress simulasi (karena upload ke IPFS via backend)
       const progressInterval = setInterval(() => {
@@ -358,7 +397,9 @@ export default function MintSbtPage() {
           uploadProgress: 100 
         }));
 
-        // Update currentMintingItem dengan IPFS hash
+        console.log('✅ Upload ke IPFS berhasil:', uploadResult.data);
+
+        // Update currentMintingItem dengan IPFS hash metadata
         setCurrentMintingItem(prev => {
           if (!prev) return null;
           return {
@@ -609,15 +650,15 @@ export default function MintSbtPage() {
         />
       )}
 
-      {/* Konten Utama - Sisa kode Anda tetap sama */}
+      {/* Konten Utama */}
       <div className="container mx-auto px-4 py-6">
-        {/* Header - DISESUAIKAN DENGAN DATA IJAZAH */}
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-xl font-bold text-gray-800 mb-2">🪙 Mint Soulbound Token (SBT)</h1>
           <p className="text-gray-600">Daftar Ijazah untuk di-mint menjadi Soulbound Token (SBT)</p>
         </div>
 
-        {/* Info Box - DISESUAIKAN DENGAN DATA IJAZAH */}
+        {/* Info Box */}
         <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100">
           <h4 className="text-sm font-semibold text-blue-800 mb-2">ℹ️ Informasi Penting</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
@@ -627,7 +668,7 @@ export default function MintSbtPage() {
             </div>
             <div className="flex items-start">
               <span className="text-purple-500 mr-2">•</span>
-              <span><strong>Pending:</strong> Data ijazah yang menunggu untuk di-mint</span>
+              <span><strong>PDF IPFS:</strong> File PDF sudah otomatis terupload ke IPFS</span>
             </div>
             <div className="flex items-start">
               <span className="text-gray-500 mr-2">•</span>
@@ -669,7 +710,7 @@ export default function MintSbtPage() {
           </div>
         )}
 
-        {/* Statistik - DISESUAIKAN DENGAN DATA IJAZAH */}
+        {/* Statistik */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <p className="text-sm text-gray-600 font-medium">Total Data</p>
@@ -689,7 +730,7 @@ export default function MintSbtPage() {
           </div>
         </div>
 
-        {/* Action Bar - DISESUAIKAN DENGAN DATA IJAZAH */}
+        {/* Action Bar */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
@@ -723,24 +764,11 @@ export default function MintSbtPage() {
                 <span className="mr-2">🔄</span>
                 {isLoading ? 'Memuat...' : 'Refresh Data'}
               </button>
-              <button
-                onClick={() => {
-                  console.log('📊 Current diplomas state:', diplomas);
-                  console.log('📈 Statistics:', {
-                    total: totalCount,
-                    pending: pendingCount,
-                    minted: mintedCount,
-                    selected: selectedCount
-                  });
-                  console.log('🌐 API Status:', apiStatus);
-                }}
-              >
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Table - DISESUAIKAN DENGAN DATA IJAZAH */}
+        {/* Table - Bagian ini tetap sama seperti kode Anda sebelumnya */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -908,12 +936,12 @@ export default function MintSbtPage() {
                         </td>
                       </tr>
                       
-                      {/* Expanded Row (Detail Lengkap) - DISESUAIKAN DENGAN DATA IJAZAH */}
+                      {/* Expanded Row (Detail Lengkap) - Tampilkan PDF IPFS Hash */}
                       {expandedRow === item.id && (
                         <tr className="bg-gray-50">
                           <td colSpan={9} className="px-4 py-4">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 bg-white rounded-lg border">
-                              {/* Kolom Kiri */}
+                              {/* Kolom Kiri - Data Mahasiswa dan Akademik */}
                               <div className="space-y-4">
                                 <div>
                                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Mahasiswa Lengkap</h4>
@@ -988,13 +1016,13 @@ export default function MintSbtPage() {
                                 </div>
                               </div>
                               
-                              {/* Kolom Kanan */}
+                              {/* Kolom Kanan - Data Sistem dan Blockchain */}
                               <div className="space-y-4">
                                 <div>
-                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Sistem</h4>
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Sistem & Blockchain</h4>
                                   <div className="space-y-3">
                                     <div>
-                                      <p className="text-gray-500 text-sm">Nomor Ijazah</p>
+                                      <p className="text-gray-500 text-sm">Nomor Ijazah (Certificate ID)</p>
                                       <p className="font-medium font-mono text-sm bg-gray-100 p-2 rounded">
                                         {item.certificate_id}
                                       </p>
@@ -1003,6 +1031,37 @@ export default function MintSbtPage() {
                                       <p className="text-gray-500 text-sm">Wallet Address</p>
                                       <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
                                         {item.wallet_address || '-'}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* ===== TAMPILKAN IPFS HASH ===== */}
+                                    <div>
+                                      <p className="text-gray-500 text-sm">IPFS Hash</p>
+                                      <div className="font-medium font-mono text-xs break-all bg-blue-50 p-2 rounded border border-blue-200">
+                                        {item.ipfs_hash ? (
+                                          <>
+                                            <span className="text-blue-600">{item.ipfs_hash}</span>
+                                            <a 
+                                              href={`https://gateway.pinata.cloud/ipfs/${item.ipfs_hash}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="ml-2 text-xs text-blue-600 hover:text-blue-800"
+                                              title="Buka di IPFS Gateway"
+                                            >
+                                              🔗 Lihat PDF
+                                            </a>
+                                          </>
+                                        ) : (
+                                          <span className="text-gray-500">- (belum diupload)</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {/* ===== END PDF IPFS HASH ===== */}
+                                    
+                                    <div>
+                                      <p className="text-gray-500 text-sm">File Hash (Lokal)</p>
+                                      <p className="font-medium font-mono text-xs break-all bg-gray-100 p-2 rounded">
+                                        {item.file_hash || '-'}
                                       </p>
                                     </div>
                                     <div>
