@@ -358,15 +358,15 @@ export default function MintSbtPage() {
         // --- Metadata standar NFT/OpenSea (UNTUK TAMPILAN) ---
         name: `Ijazah ${currentMintingItem.namaMahasiswa} - ${currentMintingItem.npm}`,
         description: `Ijazah Digital ${currentMintingItem.gelarAkademik} Program Studi ${currentMintingItem.programStudi}, ${currentMintingItem.fakultas || ''} Universitas Widya Dharma Pontianak.`,
-        image: 'bafybeifuxzvwmsh2h3lbjzx3ub2m7zfepghrvpxc2epzm7ymiz56hco2ay', // Placeholder image
+        image: 'ipfs://bafybeifuxzvwmsh2h3lbjzx3ub2m7zfepghrvpxc2epzm7ymiz56hco2ay', // Placeholder image
         
         // ===== DIPERBARUI: Gunakan ipfs_hash dari database (file PDF yang sudah di-upload ke IPFS) =====
         animation_url: currentMintingItem.ipfs_hash 
-          ? `https://gateway.pinata.cloud/ipfs/${currentMintingItem.ipfs_hash}` 
+          ? `ipfs://${currentMintingItem.ipfs_hash}` 
           : '',
         
         external_url: currentMintingItem.ipfs_hash 
-          ? `https://gateway.pinata.cloud/ipfs/${currentMintingItem.ipfs_hash}` 
+          ? `ipfs://${currentMintingItem.ipfs_hash}` 
           : '',
         // ===== END UPDATE =====
         
