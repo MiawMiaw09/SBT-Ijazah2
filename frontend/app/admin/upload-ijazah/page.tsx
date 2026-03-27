@@ -288,9 +288,9 @@ export default function UploadIjazah() {
         return;
       }
       
-      // Validasi format Certificate ID (hanya angka)
+      // Validasi format Nomor Ijazah (hanya angka)
       if (!/^\d+$/.test(formData.certificate_id)) {
-        setError('Certificate ID hanya boleh berisi angka!');
+        setError('Nomor Ijazah hanya boleh berisi angka!');
         setIsSubmitting(false);
         return;
       }
@@ -506,20 +506,11 @@ export default function UploadIjazah() {
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div>
-              {/* Admin Badge - Ukuran lebih kecil */}
-              <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mb-3">
-                <span className="mr-1">👨‍💼</span>
-                MODE ADMIN - Upload Ijazah Digital ke IPFS
-              </div>
-              
               <h1 className="text-3xl font-bold text-gray-900">
                 📤 Upload Ijazah Digital
               </h1>
               <p className="text-gray-600 mt-1">
                 Upload ijazah untuk diverifikasi dan di-mint sebagai Soulbound Token (SBT)
-              </p>
-              <p className="text-sm text-blue-600 mt-2">
-                <span className="font-medium">✨ Fitur Baru:</span> File PDF akan diupload ke IPFS dan tersedia secara permanen
               </p>
             </div>
             
@@ -572,7 +563,6 @@ export default function UploadIjazah() {
         {/* Form Container */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <form onSubmit={handleSubmit} className="p-8">
-            {/* SECTION 0: Data Sistem (Certificate ID) - DILETAKKAN DI PALING ATAS */}
             <div className="mb-10 pb-8 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-100">
                 Nomor Ijazah <span className="text-sm font-normal text-gray-500">(Nomor Identitas Ijazah)</span>
