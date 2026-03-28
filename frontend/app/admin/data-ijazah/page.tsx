@@ -584,7 +584,7 @@ export default function DataIjazahPage() {
                                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Blockchain & Sistem</h4>
                                   <div className="space-y-3">
                                     <div>
-                                      <p className="text-gray-500 text-sm">Certificate ID</p>
+                                      <p className="text-gray-500 text-sm">Nomor Ijazah</p>
                                       <p className="font-medium font-mono text-sm bg-gray-100 p-2 rounded">
                                         {diploma.certificate_id}
                                       </p>

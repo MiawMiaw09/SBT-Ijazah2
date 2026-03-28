@@ -654,7 +654,7 @@ export default function VerificationPage() {
                       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                         <div className="flex justify-between items-start">
                           <div>
-                            <label className="block text-xs font-medium text-blue-600 mb-1">Certificate ID</label>
+                            <label className="block text-xs font-medium text-blue-600 mb-1">Nomor Ijazah</label>
                             <p className="text-base font-bold text-gray-800 font-mono">{verificationData.certificate_id}</p>
                             <p className="text-xs text-blue-700 mt-1">Unique identifier resmi ijazah</p>
                           </div>
@@ -820,18 +820,6 @@ export default function VerificationPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                       Cek di PolygonScan
-                    </button>
-                    
-                    {/* Tombol Cek di OpenSea */}
-                    <button
-                      onClick={() => window.open(`https://opensea.io/assets/matic/${verificationData.contract_address}/${verificationData.token_id}`, '_blank')}
-                      className={`${verificationData.contract_address && verificationData.token_id ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-semibold py-2 px-6 rounded-lg transition duration-300 text-sm flex items-center`}
-                      disabled={!verificationData.contract_address || !verificationData.token_id}
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      Cek di OpenSea
                     </button>
                   </div>
                 </div>

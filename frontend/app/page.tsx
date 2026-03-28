@@ -80,7 +80,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features Section - HANYA 1 KOLOM: Perusahaan saja */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-xl transition-shadow duration-300">
           <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -102,16 +101,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Section Tutorial Verifikasi - DIPERBAIKI: tambah id */}
+      {/* Section Tutorial Verifikasi */}
       <section 
-        id="tutorial-verifikasi"  // <-- INI YANG DITAMBAHKAN
+        id="tutorial-verifikasi"
         ref={tutorialRef}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 scroll-mt-20"
       >
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">Cara Verifikasi Ijazah</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Metode 1: Website */}
             <div className="bg-blue-50 rounded-xl p-6">
@@ -121,10 +120,10 @@ export default function HomePage() {
               <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Verifikasi via Website</h3>
               <ol className="text-gray-600 space-y-3 pl-4 list-decimal">
                 <li>Kunjungi halaman <Link href="/verify-perusahaan" className="text-blue-600 hover:underline font-medium">Verifikasi Ijazah</Link></li>
-                <li>Masukkan Token ID / NIM / Nama Mahasiswa</li>
-                <li>Upload file ijazah yang ingin diverifikasi</li>
+                <li>Masukkan Certificate ID / NPM / Nama Mahasiswa</li>
                 <li>Sistem akan menampilkan status keaslian ijazah</li>
-                <li>Download sertifikat verifikasi jika diperlukan</li>
+                <li>Lihat detail informasi ijazah yang diverifikasi</li>
+                <li>Cek data blockchain untuk verifikasi lengkap</li>
               </ol>
               <div className="mt-6 text-center">
                 <Link 
@@ -145,15 +144,16 @@ export default function HomePage() {
               <ol className="text-gray-600 space-y-3 pl-4 list-decimal">
                 <li>Dapatkan informasi dari mahasiswa:
                   <ul className="list-disc ml-4 mt-1 space-y-1">
-                    <li>Alamat wallet mahasiswa</li>
+                    <li>Transaction Hash</li>
+                    <li>Contract Address</li>
                     <li>Token ID SBT</li>
                     <li>Hash file ijazah</li>
                   </ul>
                 </li>
-                <li>Buka <a href="https://amoy.polygonscan.com" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline font-medium">PolygonScan</a></li>
-                <li>Cari contract address: <code className="bg-gray-100 px-2 py-1 rounded text-sm">0xUNIVERSITY_SBT</code></li>
-                <li>Masukkan Token ID untuk melihat metadata</li>
-                <li>Bandingkan hash di blockchain dengan hash file</li>
+                <li>Buka <a href="https://amoy.polygonscan.com" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline font-medium">PolygonScan Amoy Testnet</a></li>
+                <li>Masukkan Transaction Hash atau Contract Address</li>
+                <li>Cek detail transaksi dan metadata SBT</li>
+                <li>Bandingkan hash di blockchain dengan hash file yang diberikan</li>
               </ol>
               <div className="mt-6 text-center">
                 <a 
@@ -166,45 +166,16 @@ export default function HomePage() {
                 </a>
               </div>
             </div>
-
-            {/* Metode 3: OpenSea */}
-            <div className="bg-purple-50 rounded-xl p-6">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-purple-600">3</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Verifikasi via OpenSea</h3>
-              <ol className="text-gray-600 space-y-3 pl-4 list-decimal">
-                <li>Dapatkan link OpenSea dari mahasiswa</li>
-                <li>Atau buka langsung:
-                  <code className="block bg-gray-100 px-2 py-1 rounded text-sm mt-1 overflow-x-auto">
-                    https://opensea.io/assets/matic/0xCONTRACT/TOKEN_ID
-                  </code>
-                </li>
-                <li>Lihat detail SBT (Soulbound Token)</li>
-                <li>Periksa metadata dan atribut ijazah</li>
-                <li>Verifikasi informasi mahasiswa dan institusi</li>
-              </ol>
-              <div className="mt-6 text-center">
-                <a 
-                  href="https://opensea.io"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200 text-sm"
-                >
-                  Buka OpenSea
-                </a>
-              </div>
-            </div>
           </div>
 
           {/* Catatan Penting */}
           <div className="mt-10 bg-yellow-50 border border-yellow-200 rounded-xl p-6">
             <h4 className="text-lg font-bold text-gray-900 mb-3">📝 Catatan Penting:</h4>
             <ul className="text-gray-600 space-y-2">
-              <li>✅ <span className="font-medium">Verifikasi via Website</span> - Cepat & mudah untuk semua kalangan</li>
-              <li>🔗 <span className="font-medium">Verifikasi via PolygonScan</span> - Transparan & independen, tanpa perantara</li>
-              <li>💎 <span className="font-medium">Verifikasi via OpenSea</span> - Visualisasi SBT & metadata lengkap</li>
-              <li>🎓 Mahasiswa/alumni dapat mengakses SBT mereka langsung melalui wallet (Metamask)</li>
+              <li>✅ <span className="font-medium">Verifikasi via Website</span> - Cepat & mudah untuk semua kalangan, cukup masukkan Certificate ID</li>
+              <li>🔗 <span className="font-medium">Verifikasi via PolygonScan</span> - Transparan & independen, verifikasi langsung di blockchain explorer</li>
+              <li>🎓 <span className="font-medium">Status Ijazah</span> - Hanya ijazah dengan status "Minted" yang dapat diverifikasi di blockchain</li>
+              <li>💡 <span className="font-medium">Data Lengkap</span> - Setiap verifikasi menampilkan informasi lengkap: identitas, akademik, dan data blockchain</li>
             </ul>
           </div>
         </div>
