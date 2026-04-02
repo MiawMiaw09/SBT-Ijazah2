@@ -23,6 +23,10 @@ interface DiplomaData {
   transaction_hash: string;
   block_number: number;
   file_hash: string;
+  ipfs_hash?: string;
+  ipfs_url?: string;
+  metadata_ipfs_hash?: string;  // ✅ TAMBAHKAN
+  metadata_ipfs_url?: string;   // ✅ TAMBAHKAN
   certificate_id: string;
   status: 'pending' | 'verified' | 'minted' | 'rejected';
   created_at: string;
@@ -49,7 +53,7 @@ export default function VerificationPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const errorRef = useRef<HTMLDivElement>(null); // ✅ Ref untuk error section
+  const errorRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -70,7 +74,6 @@ export default function VerificationPage() {
     try {
       console.log(`🔍 Mencari ijazah dengan Certificate ID: ${certificateId}`);
       
-      // Mencari berdasarkan certificate_id
       const response = await fetch(`${API_BASE_URL}/api/diplomas/certificate/${certificateId}`);
       
       console.log('📡 Response status:', response.status);
@@ -85,24 +88,17 @@ export default function VerificationPage() {
       const result = await response.json();
       console.log('📊 Data diterima:', result);
       
-      // Handle berbagai format response
       let diplomaData: DiplomaData;
       
       if (result.data) {
-        // Format: { success: true, data: {...} }
         diplomaData = result.data;
       } else if (result.id) {
-        // Format langsung data
         diplomaData = result;
       } else {
         throw new Error('Format data tidak valid');
       }
 
-      // ✅ VALIDASI: Hanya tampilkan data dengan status 'minted'
       if (diplomaData.status !== 'minted') {
-        console.log(`⛔ Ijazah ditemukan tapi status: ${diplomaData.status} (harus minted)`);
-        
-        // Berikan pesan error yang sesuai dengan statusnya
         let errorMessage = '';
         switch (diplomaData.status) {
           case 'pending':
@@ -117,11 +113,9 @@ export default function VerificationPage() {
           default:
             errorMessage = 'Ijazah belum di-mint ke blockchain. Hanya ijazah dengan status minted yang dapat diverifikasi.';
         }
-        
         throw new Error(errorMessage);
       }
       
-      // ✅ Hanya set data jika statusnya minted
       setVerificationData(diplomaData);
       setError(null);
       
@@ -134,7 +128,6 @@ export default function VerificationPage() {
     }
   };
 
-  // ✅ Auto scroll ke error section ketika error muncul
   useEffect(() => {
     if (error && errorRef.current) {
       setTimeout(() => {
@@ -146,7 +139,6 @@ export default function VerificationPage() {
     }
   }, [error]);
 
-  // Auto scroll ke hasil verifikasi ketika data tersedia
   useEffect(() => {
     if (verificationData && resultsRef.current) {
       setTimeout(() => {
@@ -195,13 +187,12 @@ export default function VerificationPage() {
 
   const openIPFS = (hash: string) => {
     if (hash) {
-      window.open(`https://ipfs.io/ipfs/${hash}`, '_blank');
+      window.open(`https://gateway.pinata.cloud/ipfs/${hash}`, '_blank');
     } else {
       alert('Hash IPFS tidak valid');
     }
   };
 
-  // Format date untuk display
   const formatDateDisplay = (dateString: string) => {
     if (!dateString) return '-';
     try {
@@ -217,7 +208,6 @@ export default function VerificationPage() {
     }
   };
 
-  // Format date singkat
   const formatDateShort = (dateString: string) => {
     if (!dateString) return '-';
     try {
@@ -232,7 +222,6 @@ export default function VerificationPage() {
     }
   };
 
-  // Ekstrak tahun dari tanggal lulus
   const getYearFromDate = (dateString: string) => {
     if (!dateString) return '';
     try {
@@ -242,7 +231,6 @@ export default function VerificationPage() {
     }
   };
 
-  // Fungsi untuk mendapatkan warna status
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
@@ -253,7 +241,6 @@ export default function VerificationPage() {
     }
   };
 
-  // Fungsi untuk mendapatkan label status
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending': return 'Pending / Menunggu Verifikasi';
@@ -264,7 +251,6 @@ export default function VerificationPage() {
     }
   };
 
-  // Fungsi untuk mendapatkan ikon status
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return '⏳';
@@ -277,12 +263,10 @@ export default function VerificationPage() {
 
   return (
     <div ref={topRef} className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header - sticky */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-4">
-              {/* Logo */}
               <div className="w-16 h-16 relative">
                 <Image
                   src="/gambar/UWD.png"
@@ -292,8 +276,6 @@ export default function VerificationPage() {
                   className="object-contain"
                 />
               </div>
-              
-              {/* Text Logo */}
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-gray-900 leading-tight">
                   Universitas Widya
@@ -303,8 +285,6 @@ export default function VerificationPage() {
                 </h2>
               </div>
             </div>
-
-            {/* Navigation */}
             <nav className="hidden md:flex space-x-8">
               <Link href="/" className="text-gray-700 hover:text-blue-600 font-medium">
                 Home
@@ -326,9 +306,7 @@ export default function VerificationPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section */}
         <section className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
             Verifikasi Ijazah<br />
@@ -340,7 +318,6 @@ export default function VerificationPage() {
         </section>
 
         <div className="max-w-4xl mx-auto">
-          {/* Form Input Certificate ID */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
             <div className="text-center mb-6">
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -425,10 +402,9 @@ export default function VerificationPage() {
             </div>
           </div>
 
-          {/* Pesan Error - Ditingkatkan untuk menampilkan status spesifik */}
           {error && searchAttempted && (
             <div 
-              ref={errorRef} // ✅ Menambahkan ref untuk auto scroll
+              ref={errorRef}
               className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-red-200 scroll-mt-8"
             >
               <div className="text-center">
@@ -481,7 +457,6 @@ export default function VerificationPage() {
                 </div>
               </div>
               
-              {/* Status Validasi */}
               <div className="mb-8">
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -525,9 +500,7 @@ export default function VerificationPage() {
                 </div>
               </div>
 
-              {/* Data dalam Grid Layout - sama seperti sebelumnya */}
               <div className="space-y-6">
-                {/* Bagian 1: Identitas Mahasiswa */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
@@ -559,7 +532,6 @@ export default function VerificationPage() {
                   </div>
                 </div>
 
-                {/* Bagian 2: Data Akademik */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <span className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
@@ -609,7 +581,6 @@ export default function VerificationPage() {
                   </div>
                 </div>
 
-                {/* Bagian 3: Legalitas */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <span className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
@@ -640,7 +611,6 @@ export default function VerificationPage() {
                   </div>
                 </div>
 
-                {/* Bagian 4: Data Blockchain */}
                 {(verificationData.token_id || verificationData.transaction_hash || verificationData.contract_address) && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -650,7 +620,6 @@ export default function VerificationPage() {
                       Data Blockchain
                     </h3>
                     <div className="space-y-4">
-                      {/* Certificate ID */}
                       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                         <div className="flex justify-between items-start">
                           <div>
@@ -667,7 +636,6 @@ export default function VerificationPage() {
                         </div>
                       </div>
 
-                      {/* Token ID */}
                       {verificationData.token_id && (
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <div className="flex justify-between items-start">
@@ -686,7 +654,6 @@ export default function VerificationPage() {
                         </div>
                       )}
 
-                      {/* Wallet Address */}
                       {verificationData.wallet_address && (
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <div className="flex justify-between items-start">
@@ -707,7 +674,6 @@ export default function VerificationPage() {
                         </div>
                       )}
 
-                      {/* Transaction Details */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {verificationData.contract_address && (
                           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -734,7 +700,6 @@ export default function VerificationPage() {
                         )}
                       </div>
 
-                      {/* Transaction Hash */}
                       {verificationData.transaction_hash && (
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <label className="block text-xs font-medium text-gray-500 mb-1">Transaction Hash</label>
@@ -753,29 +718,66 @@ export default function VerificationPage() {
                         </div>
                       )}
 
-                      {/* IPFS Hash */}
-                      {verificationData.file_hash && (
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                          <label className="block text-xs font-medium text-gray-500 mb-1">IPFS Hash (Metadata)</label>
-                          <div className="flex justify-between items-start">
-                            <p className="text-xs font-semibold text-gray-800 font-mono break-all">
-                              {verificationData.file_hash}
+                      {/* ===== PERBAIKAN UTAMA: TAMPILKAN METADATA IPFS HASH ===== */}
+                      {/* Metadata IPFS Hash (untuk verifikasi blockchain) */}
+                      {(verificationData.metadata_ipfs_hash || verificationData.ipfs_hash) && (
+                        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200">
+                          <label className="block text-xs font-medium text-indigo-600 mb-1">
+                            🔗 IPFS Hash (Metadata Blockchain)
+                          </label>
+                          <div className="flex justify-between items-start flex-wrap gap-2">
+                            <p className="text-xs font-semibold text-gray-800 font-mono break-all flex-1">
+                              {verificationData.metadata_ipfs_hash || verificationData.ipfs_hash}
                             </p>
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-2 flex-shrink-0">
                               <button
-                                onClick={() => copyToClipboard(verificationData.file_hash!, 'IPFS Hash')}
+                                onClick={() => copyToClipboard(verificationData.metadata_ipfs_hash || verificationData.ipfs_hash!, 'Metadata IPFS Hash')}
                                 className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300 transition-colors"
                               >
                                 Salin
                               </button>
                               <button
-                                onClick={() => openIPFS(verificationData.file_hash!)}
-                                className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 transition-colors"
+                                onClick={() => openIPFS(verificationData.metadata_ipfs_hash || verificationData.ipfs_hash!)}
+                                className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded hover:bg-indigo-200 transition-colors"
                               >
-                                Lihat
+                                Lihat Metadata
                               </button>
                             </div>
                           </div>
+                          <p className="text-xs text-indigo-600 mt-2">
+                            Hash metadata JSON yang tersimpan di blockchain. Digunakan untuk verifikasi keaslian ijazah.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* PDF IPFS Hash (untuk download file) - tampilkan jika berbeda dengan metadata hash */}
+                      {verificationData.ipfs_hash && verificationData.ipfs_hash !== (verificationData.metadata_ipfs_hash || verificationData.ipfs_hash) && (
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            📄 IPFS Hash (File PDF Ijazah)
+                          </label>
+                          <div className="flex justify-between items-start flex-wrap gap-2">
+                            <p className="text-xs font-semibold text-gray-800 font-mono break-all flex-1">
+                              {verificationData.ipfs_hash}
+                            </p>
+                            <div className="flex space-x-2 flex-shrink-0">
+                              <button
+                                onClick={() => copyToClipboard(verificationData.ipfs_hash!, 'PDF IPFS Hash')}
+                                className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300 transition-colors"
+                              >
+                                Salin
+                              </button>
+                              <button
+                                onClick={() => openIPFS(verificationData.ipfs_hash!)}
+                                className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 transition-colors"
+                              >
+                                Buka PDF
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Hash file PDF ijazah asli. Gunakan untuk mengunduh dokumen ijazah.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -783,7 +785,6 @@ export default function VerificationPage() {
                 )}
               </div>
 
-              {/* Action Buttons */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row gap-3 justify-between">
                   <div className="text-sm text-gray-500">
@@ -810,7 +811,6 @@ export default function VerificationPage() {
                       Verifikasi Lagi
                     </button>
                     
-                    {/* Tombol Cek di PolygonScan */}
                     <button
                       onClick={() => verificationData.transaction_hash && openPolygonscan(verificationData.transaction_hash)}
                       className={`${verificationData.transaction_hash ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-semibold py-2 px-6 rounded-lg transition duration-300 text-sm flex items-center`}
@@ -829,7 +829,6 @@ export default function VerificationPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="bg-white border-t mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="text-center">
