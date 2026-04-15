@@ -26,9 +26,9 @@ router.get('/:id', diplomaController.getDiplomaById);
 // @desc    Get ijazah by NPM
 router.get('/npm/:npm', diplomaController.getDiplomaByNpm);
 
-// @route   GET /api/diplomas/verify/:npm
+// @route   GET /api/diplomas/verify/:certificateId
 // @desc    Verify keaslian ijazah
-router.get('/verify/:npm', diplomaController.verifyDiploma);
+router.get('/verify/:certificateId', diplomaController.verifyDiploma);
 
 // @route   GET /api/diplomas/certificate/:certificateId
 // @desc    Get ijazah by certificate ID (untuk verifikasi publik)

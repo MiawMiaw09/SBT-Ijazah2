@@ -288,11 +288,11 @@ exports.getDiplomaByCertificateId = async (req, res) => {
 };
 
 // @desc    Verify ijazah (cek keaslian)
-// @route   GET /api/diplomas/verify/:npm
+// @route   GET /api/diplomas/verify/:certificateId
 // @access  Public
 exports.verifyDiploma = async (req, res) => {
   try {
-    const diploma = await Diploma.findOne({ where: { npm: req.params.npm } });
+    const diploma = await Diploma.findOne({ where: { certificate_id: req.params.certificateId } });
 
     if (!diploma) {
       return res.json({
