@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useProtectedRoute } from '@/lib/useProtectedRoute';
 
 interface IjazahData {
   id: number;
@@ -23,6 +24,8 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const { isLoading: authLoading } = useProtectedRoute()
+  
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     minted: 0,
@@ -276,6 +279,18 @@ export default function AdminDashboard() {
     
     return colorMap[status] || { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-500' };
   };
+
+  // Show loading screen saat checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">

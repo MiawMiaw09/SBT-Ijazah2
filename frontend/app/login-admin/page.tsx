@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useAuth } from '@/lib/authContext';
 
 export default function LoginPage() {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -10,6 +11,14 @@ export default function LoginPage() {
   const [inputAddress, setInputAddress] = useState('');
   const [showInput, setShowInput] = useState(false);
   const router = useRouter();
+  const { login, isAuthenticated, isLoading } = useAuth();
+
+  // Jika sudah login, redirect ke admin
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/admin')
+    }
+  }, [isAuthenticated, isLoading, router])
 
   // Daftar wallet address untuk demo
   const demoWallets = [
@@ -47,6 +56,12 @@ export default function LoginPage() {
       
       setWalletAddress(inputAddress);
       
+      // Simpan session menggunakan context
+      login(inputAddress);
+      
+      // Set cookie untuk middleware
+      document.cookie = `adminWallet=${inputAddress}; path=/; max-age=${7 * 24 * 60 * 60}`;
+      
       // Redirect ke admin dashboard setelah 1.5 detik
       setTimeout(() => {
         router.push('/admin');
@@ -65,6 +80,18 @@ export default function LoginPage() {
     setInputAddress('');
     setShowInput(false);
   };
+
+  // Show loading screen saat checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+          <p className="text-white">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 flex items-center justify-center p-4">

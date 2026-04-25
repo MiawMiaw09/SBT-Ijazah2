@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatDateTime } from '@/app/services/api';
 import { useRouter } from 'next/navigation';
+import { useProtectedRoute } from '@/lib/useProtectedRoute';
 
 // Interface untuk data ijazah berdasarkan database
 interface ExtendedDiploma {
@@ -44,6 +45,8 @@ interface ExtendedDiploma {
 
 export default function DataIjazahPage() {
   const router = useRouter();
+  const { isLoading: authLoading } = useProtectedRoute();
+  
   const [diplomas, setDiplomas] = useState<ExtendedDiploma[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -249,6 +252,18 @@ export default function DataIjazahPage() {
       return dateString;
     }
   };
+
+  // Show loading screen saat checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

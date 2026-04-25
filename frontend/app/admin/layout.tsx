@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/authContext'
+import { useProtectedRoute } from '@/lib/useProtectedRoute'
 
 export default function AdminLayout({
   children,
@@ -13,6 +15,8 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { logout } = useAuth()
+  const { isLoading: authLoading } = useProtectedRoute()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const menuItems = [
@@ -25,7 +29,27 @@ export default function AdminLayout({
   const handleLogout = () => {
     console.log('User logged out')
     setShowLogoutConfirm(false)
+    
+    // Clear cookie
+    document.cookie = 'adminWallet=; path=/; max-age=0'
+    
+    // Logout dari context
+    logout()
+    
+    // Redirect ke login
     router.push('/login-admin')
+  }
+
+  // Show loading screen saat checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

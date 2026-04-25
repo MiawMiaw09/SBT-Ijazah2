@@ -3,6 +3,7 @@
 import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { diplomaAPI } from '@/app/services/api';
+import { useProtectedRoute } from '@/lib/useProtectedRoute';
 
 interface IjazahFormData {
   // Data Sistem (diletakkan di atas)
@@ -36,6 +37,7 @@ interface IjazahFormData {
 
 export default function UploadIjazah() {
   const router = useRouter();
+  const { isLoading: authLoading } = useProtectedRoute();
   
   // Data kosong sebagai initial state
   const initialEmptyFormData: IjazahFormData = {
@@ -498,6 +500,18 @@ export default function UploadIjazah() {
       fileName === ''
     );
   };
+
+  // Show loading screen saat checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">

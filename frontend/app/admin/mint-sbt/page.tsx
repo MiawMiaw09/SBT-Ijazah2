@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { diplomaAPI, Diploma, MintData } from '@/app/services/api';
 import MintPopup from '../../components/MintPopup';
 import { MintStep } from '../../types/ijazah';
+import { useProtectedRoute } from '@/lib/useProtectedRoute';
 
 // Interface PopupDiplomaData lokal (harus sesuai dengan yang di MintPopup)
 interface PopupDiplomaData {
@@ -43,6 +44,7 @@ interface DiplomaWithSelection extends Diploma {
 
 export default function MintSbtPage() {
   const router = useRouter();
+  const { isLoading: authLoading } = useProtectedRoute();
   
   const [diplomas, setDiplomas] = useState<DiplomaWithSelection[]>([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -621,6 +623,18 @@ export default function MintSbtPage() {
   const totalCount = diplomas.length;
   const pendingCount = diplomas.filter(item => item.status === "pending").length;
   const mintedCount = diplomas.filter(item => item.status === "minted").length;
+
+  // Show loading screen saat checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

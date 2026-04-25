@@ -283,7 +283,7 @@ export default function VerificationPage() {
                   Universitas Widya
                 </h1>
                 <h2 className="text-xl font-bold text-gray-900 leading-tight">
-                  dharma Pontianak
+                  Dharma Pontianak
                 </h2>
               </div>
             </div>

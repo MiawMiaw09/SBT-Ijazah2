@@ -39,7 +39,7 @@ export default function HomePage() {
                   Universitas Widya
                 </h1>
                 <h2 className="text-xl font-bold text-gray-900 leading-tight">
-                  dharma Pontianak
+                  Dharma Pontianak
                 </h2>
               </div>
             </div>
@@ -120,7 +120,7 @@ export default function HomePage() {
               <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Verifikasi via Website</h3>
               <ol className="text-gray-600 space-y-3 pl-4 list-decimal">
                 <li>Kunjungi halaman <Link href="/verify-perusahaan" className="text-blue-600 hover:underline font-medium">Verifikasi Ijazah</Link></li>
-                <li>Masukkan Certificate ID / NPM / Nama Mahasiswa</li>
+                <li>Masukkan Nomor Ijazah Mahasiswa</li>
                 <li>Sistem akan menampilkan status keaslian ijazah</li>
                 <li>Lihat detail informasi ijazah yang diverifikasi</li>
                 <li>Cek data blockchain untuk verifikasi lengkap</li>
@@ -150,7 +150,7 @@ export default function HomePage() {
                     <li>Hash file ijazah</li>
                   </ul>
                 </li>
-                <li>Buka <a href="https://amoy.polygonscan.com" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline font-medium">PolygonScan Amoy Testnet</a></li>
+                <li>Buka <a href="https://amoy.polygonscan.com" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline font-medium">PolygonScan</a></li>
                 <li>Masukkan Transaction Hash atau Contract Address</li>
                 <li>Cek detail transaksi dan metadata SBT</li>
                 <li>Bandingkan hash di blockchain dengan hash file yang diberikan</li>
