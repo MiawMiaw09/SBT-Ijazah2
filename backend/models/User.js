@@ -5,33 +5,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true
     },
-    email: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: true
-      }
-    },
     password_hash: {
       type: DataTypes.STRING(255),
-      allowNull: false
+      allowNull: false,
+      field: 'password'
     },
     role: {
-      type: DataTypes.ENUM('admin', 'validator', 'viewer'),
-      defaultValue: 'viewer'
-    },
-    wallet_address: {
-      type: DataTypes.STRING(42),
-      allowNull: true
-    },
-    is_active: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true
-    },
-    last_login: {
-      type: DataTypes.DATE,
-      allowNull: true
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: 'admin'
     }
   }, {
     tableName: 'users',

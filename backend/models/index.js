@@ -9,6 +9,9 @@ db.sequelize = sequelize;
 // Import model Diploma
 db.Diploma = require('./Diploma')(sequelize, DataTypes);
 
+// Import model User
+db.User = require('./User')(sequelize, DataTypes);
+
 // Fungsi untuk sync database dengan opsi yang aman
 const syncDatabase = async (options = {}) => {
   const { 

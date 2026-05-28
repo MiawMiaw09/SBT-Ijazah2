@@ -7,6 +7,7 @@ const path = require('path');
 const db = require('./models');
 
 // Import routes
+const authRoutes = require('./routes/authRoutes');
 const diplomaRoutes = require('./routes/diplomaRoutes');
 
 // Load environment variables
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/diplomas', diplomaRoutes);
 
 // Root route
