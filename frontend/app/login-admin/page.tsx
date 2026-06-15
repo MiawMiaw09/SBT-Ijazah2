@@ -167,7 +167,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-blue-200 text-sm">
-            Sistem Ijazah Digital &copy; 2026 Universitas Widya Dharma Pontianak
+            Sistem Ijazah Digital &copy; 2026 Universitas Widya Dharma Pontianak KALBAR
           </p>
         </div>
       </div>
