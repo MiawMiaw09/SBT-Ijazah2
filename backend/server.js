@@ -77,7 +77,7 @@ app.use((err, req, res, next) => {
 // Sync database dan start server
 const PORT = process.env.PORT || 5000;
 
-db.syncDatabase(false, true).then(() => {
+db.syncDatabase({ force: false, alter: true }).then(() => {
   app.listen(PORT, () => {
     console.log(`\n✨ ======================================== ✨`);
     console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
