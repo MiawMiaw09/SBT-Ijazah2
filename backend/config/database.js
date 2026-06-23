@@ -24,7 +24,7 @@ const postgresConfig = {
   },
   define: {
     timestamps: true,
-    underscored: false,
+    underscored: true,
     freezeTableName: true
   },
   dialectOptions: {
@@ -41,7 +41,7 @@ const sqliteConfig = {
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   define: {
     timestamps: true,
-    underscored: false,
+    underscored: true,
     freezeTableName: true
   }
 };
@@ -75,7 +75,7 @@ if (useLocalDb) {
     logging: false,
     define: {
       timestamps: true,
-      underscored: false,
+      underscored: true,
       freezeTableName: true
     }
   });

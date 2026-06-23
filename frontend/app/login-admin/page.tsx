@@ -47,8 +47,12 @@ export default function LoginPage() {
         return;
       }
 
-      login(result.data.username || username);
+      // Pass both username and JWT token
+      login(result.data.username || username, result.token);
       document.cookie = `adminWallet=${result.data.username || username}; path=/; max-age=${7 * 24 * 60 * 60}`;
+      if (result.token) {
+        document.cookie = `adminToken=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+      }
 
       router.push('/admin');
     } catch (err) {

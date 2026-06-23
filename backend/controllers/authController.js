@@ -1,4 +1,5 @@
 const { SHA256 } = require('crypto-js');
+const jwt = require('jsonwebtoken');
 const db = require('../models');
 
 exports.login = async (req, res) => {
@@ -36,10 +37,23 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role || 'admin'
+      },
+      process.env.JWT_SECRET || 'diploma_verification_secret_key_2024',
+      { expiresIn: '24h' }
+    );
+
     return res.json({
       success: true,
       message: 'Login berhasil',
+      token: token,
       data: {
+        id: user.id,
         username: user.username,
         role: user.role || 'admin'
       }
