@@ -15,8 +15,31 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// CORS Configuration - whitelist frontend domains
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://sbt-ijazah2.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check exact match or *.vercel.app pattern
+    if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    console.warn(`⚠️ CORS blocked origin: ${origin}`);
+    return callback(null, true); // Allow all for now, log warnings
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -70,7 +93,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     message: 'Terjadi kesalahan pada server',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+    error: err.message
   });
 });
 

@@ -172,7 +172,7 @@ exports.uploadDiploma = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error uploading diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -195,7 +195,7 @@ exports.getAllDiplomas = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching diplomas',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -222,7 +222,7 @@ exports.getDiplomaById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -249,7 +249,7 @@ exports.getDiplomaByNpm = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -325,7 +325,7 @@ exports.verifyDiploma = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error verifying diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -359,7 +359,7 @@ exports.getPendingDiplomas = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching pending diplomas',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -416,7 +416,7 @@ exports.mintDiploma = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error minting diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -444,7 +444,7 @@ exports.getStatistics = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching statistics',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -489,7 +489,7 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching dashboard statistics',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -562,7 +562,7 @@ exports.deleteDiploma = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -609,7 +609,7 @@ exports.updateDiploma = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -662,7 +662,7 @@ exports.softDeleteDiploma = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error soft deleting diploma',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -696,7 +696,7 @@ exports.getDiplomasByStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching diplomas by status',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -796,7 +796,7 @@ exports.uploadToIPFS = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error uploading to IPFS',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -899,7 +899,7 @@ exports.mintToBlockchain = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error minting to blockchain',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
@@ -985,7 +985,7 @@ exports.getDiplomaPDF = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting PDF',
-      error: process.env.NODE_ENV === 'development' ? error.message : {}
+      error: error.message
     });
   }
 };
