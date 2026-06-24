@@ -78,7 +78,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 db.syncDatabase({ force: false, alter: true }).then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n✨ ======================================== ✨`);
     console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
     console.log(`📊 Database: ${process.env.DB_NAME || 'diploma_db'}`);

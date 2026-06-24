@@ -24,6 +24,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const { isLoading: authLoading } = useProtectedRoute()
   
   const [stats, setStats] = useState<DashboardStats>({
@@ -67,7 +68,7 @@ export default function AdminDashboard() {
       console.log('📊 Fetching dashboard data from API...');
       
       // 1. Ambil data statistik dashboard dari API baru
-      const statsResponse = await fetch('http://localhost:5000/api/diplomas/stats/dashboard', {
+      const statsResponse = await fetch(`${API_BASE_URL}/api/diplomas/stats/dashboard`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +103,7 @@ export default function AdminDashboard() {
       }
       
       // 2. Ambil data ijazah terbaru untuk aktivitas
-      const ijazahResponse = await fetch('http://localhost:5000/api/diplomas', {
+      const ijazahResponse = await fetch(`${API_BASE_URL}/api/diplomas`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -159,7 +160,7 @@ export default function AdminDashboard() {
   // Fallback function untuk menghitung statistik dari data ijazah
   const fetchAndCalculateStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/diplomas', {
+      const response = await fetch(`${API_BASE_URL}/api/diplomas`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
