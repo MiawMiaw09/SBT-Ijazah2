@@ -25,13 +25,17 @@ class BlockchainService {
 
   initialize() {
     try {
-      // Inisialisasi provider (Polygon Amoy)
+      // ====================================================================
+      // [PRESENTASI: KONEKSI KE JARINGAN POLYGON]
+      // Inisialisasi provider menggunakan URL RPC dari Polygon Amoy Testnet.
+      // Di sini aplikasi terhubung langsung ke node blockchain.
+      // ====================================================================
       this.provider = new ethers.providers.JsonRpcProvider(process.env.BLOCKCHAIN_RPC_URL);
       
-      // Inisialisasi wallet dengan private key
+      // Inisialisasi wallet dengan private key admin kampus untuk membayar gas fee
       this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
       
-      // Inisialisasi contract
+      // Inisialisasi instance Smart Contract IjazahSBT
       this.contract = new ethers.Contract(
         this.contractAddress,
         IjazahSBT_ABI,
@@ -49,19 +53,27 @@ class BlockchainService {
     try {
       console.log(`🚀 Minting SBT for ${recipientAddress} with IPFS: ${ipfsHash}`);
       
-      // Format URI (biasanya ipfs://{hash})
+      // ====================================================================
+      // [PRESENTASI: INTEGRASI IPFS & BLOCKCHAIN]
+      // Menggabungkan hash dari IPFS menjadi format URI standar.
+      // URI ini yang akan dicatat permanen di blockchain Polygon.
+      // ====================================================================
       const tokenURI = `ipfs://${ipfsHash}`;
       
-      // Estimasi gas
+      // Estimasi gas fee yang dibutuhkan untuk transaksi
       const gasEstimate = await this.contract.estimateGas.mint(recipientAddress, tokenURI);
       const gasPrice = await this.provider.getGasPrice();
       
       console.log(`⛽ Gas estimate: ${gasEstimate.toString()}`);
       console.log(`⛽ Gas price: ${ethers.utils.formatUnits(gasPrice, 'gwei')} Gwei`);
 
-      // Execute mint transaction
+      // ====================================================================
+      // [PRESENTASI: EKSEKUSI SMART CONTRACT]
+      // Memanggil fungsi 'mint' pada Smart Contract IjazahSBT.
+      // Proses ini memerlukan biaya (gas fee) dalam bentuk token MATIC.
+      // ====================================================================
       const tx = await this.contract.mint(recipientAddress, tokenURI, {
-        gasLimit: gasEstimate.mul(120).div(100), // +20% buffer
+        gasLimit: gasEstimate.mul(120).div(100), // +20% buffer untuk keamanan
         gasPrice: gasPrice
       });
 

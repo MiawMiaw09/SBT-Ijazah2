@@ -76,6 +76,12 @@ export default function VerificationPage() {
     try {
       console.log(`🔍 Mencari ijazah dengan Certificate ID: ${certificateId}`);
       
+      // ====================================================================
+      // [PRESENTASI: MEMANGGIL BACKEND UNTUK VERIFIKASI]
+      // Frontend mengirimkan request ke backend menggunakan Certificate ID.
+      // Jika backend merespon bahwa ijazah ditemukan dan berstatus "minted",
+      // maka ijazah tersebut dinyatakan VALID dan ASLI.
+      // ====================================================================
       const response = await fetch(`${API_BASE_URL}/api/diplomas/certificate/${certificateId}`);
       
       console.log('📡 Response status:', response.status);

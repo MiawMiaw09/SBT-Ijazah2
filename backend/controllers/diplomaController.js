@@ -60,7 +60,12 @@ exports.uploadDiploma = async (req, res) => {
       }
     }
 
-    // Upload file PDF ke IPFS via Pinata
+    // ====================================================================
+    // [PRESENTASI: PENYIMPANAN DESENTRALISASI (IPFS)]
+    // File PDF fisik dari ijazah tidak disimpan di database lokal,
+    // melainkan diunggah ke IPFS melalui Pinata.
+    // IPFS memastikan file tidak dapat diubah (immutable).
+    // ====================================================================
     console.log('📤 Uploading PDF to IPFS...');
     const fileStream = fs.createReadStream(req.file.path);
     
@@ -290,6 +295,12 @@ exports.getDiplomaByCertificateId = async (req, res) => {
 // @desc    Verify ijazah (cek keaslian)
 // @route   GET /api/diplomas/verify/:certificateId
 // @access  Public
+// ====================================================================
+// [PRESENTASI: PROSES VERIFIKASI]
+// Saat perusahaan memasukkan ID Ijazah, sistem akan mengecek
+// apakah ID tersebut ada di database dan statusnya adalah 'minted' 
+// (berarti sudah ada di blockchain).
+// ====================================================================
 exports.verifyDiploma = async (req, res) => {
   try {
     const diploma = await Diploma.findOne({ where: { certificate_id: req.params.certificateId } });
